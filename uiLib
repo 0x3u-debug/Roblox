@@ -1,6 +1,5 @@
 --[[
     NAME: Peronahax
-    credits - idk 4?
     FOR: All
     
     BASE: 
@@ -2848,8 +2847,8 @@ local Library; do
             Data = Data or {}
 
             local Cfg = {
-                Prefix = Data.Prefix or "perona", 
-                Suffix = Data.Suffix or "hax",
+                Prefix = Data.Prefix or "Verya", 
+                Suffix = Data.Suffix or ".gg",
 
                 Size = Data.Size or UDim2.new(0, 506, 0, 661),
 
@@ -2906,7 +2905,7 @@ local Library; do
                 Items.WatermarkInline = Library:Create("Frame",{Parent = Items.Watermark.Instance; Position = UDim2.new(0, 1, 0, 1); Size = UDim2.new(1, -2, 1, 0); BorderSizePixel = 0; BackgroundColor3 = Themes.Preset["Inline"]}):Themify("Inline", "BackgroundColor3")
                 Items.WatermarkBackground = Library:Create("Frame",{Parent = Items.WatermarkInline.Instance; Position = UDim2.new(0, 1, 0, 1); Size = UDim2.new(1, -2, 1, 0); BorderSizePixel = 0; BackgroundColor3 = Color3.fromRGB(255, 255, 255)})
                 Items.UIGradient = Library:Create("UIGradient",{Rotation = 90; Parent = Items.WatermarkBackground.Instance; Color = ColorSeq{ColorKey(0, Color3.fromRGB(38, 38, 38)), ColorKey(1, Color3.fromRGB(25, 25, 25))}})
-                Items.WatermarkTitle = Library:Create("TextLabel",{TextColor3 = Themes.Preset["Accent"]; Text = 'perona<font color = "rgb(255, 255, 255)">hax | 100 fps | 45 ping</font>'; Parent = Items.WatermarkBackground.Instance; BorderSizePixel = 0; BackgroundTransparency = 1; Position = UDim2.new(0, 4, 0, 4); RichText = true; AutomaticSize = Enum.AutomaticSize.XY; BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Themify("Accent", "TextColor3")
+                Items.WatermarkTitle = Library:Create("TextLabel",{TextColor3 = Themes.Preset["Accent"]; Text = 'Verya<font color = "rgb(245, 20, 136)">.gg</font>'; Parent = Items.WatermarkBackground.Instance; BorderSizePixel = 0; BackgroundTransparency = 1; Position = UDim2.new(0, 4, 0, 4); RichText = true; AutomaticSize = Enum.AutomaticSize.XY; BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Themify("Accent", "TextColor3")
                 Items.UIStroke = Library:Create("UIStroke",{Parent = Items.WatermarkTitle.Instance; LineJoinMode = Enum.LineJoinMode.Miter})
                 Items.UIPadding = Library:Create("UIPadding",{PaddingBottom = UDim.new(0, 3); PaddingTop = UDim.new(0, 2); PaddingRight = UDim.new(0, 7); Parent = Items.WatermarkTitle.Instance})
                 Items.UIPadding = Library:Create("UIPadding",{PaddingBottom = UDim.new(0, 2); Parent = Items.WatermarkInline.Instance})
@@ -2922,6 +2921,27 @@ local Library; do
                 end
             end
             
+            function Cfg.FormatBrandText(Extra)
+                local Main = Themes.Preset.TextMain
+                local Accent = Themes.Preset.Accent
+                local Text = string.format(
+                    '<font color="rgb(%d,%d,%d)">%s</font><font color="rgb(%d,%d,%d)">%s</font>',
+                    math.floor(Main.R * 255), math.floor(Main.G * 255), math.floor(Main.B * 255), Cfg.Prefix,
+                    math.floor(Accent.R * 255), math.floor(Accent.G * 255), math.floor(Accent.B * 255), Cfg.Suffix
+                )
+
+                if Extra and Extra ~= "" then
+                    Text ..= string.format(
+                        '<font color="rgb(%d,%d,%d)"> %s</font>',
+                        math.floor(Main.R * 255), math.floor(Main.G * 255), math.floor(Main.B * 255), Extra
+                    )
+                end
+
+                return Text
+            end
+
+            Items.Title.Instance.Text = Cfg.FormatBrandText("~ " .. os.date("%b %d, %Y"))
+
             function Cfg.SetWatermarkVisibility(Bool)
                 Items.Watermark:Tween({GroupTransparency = Bool and 0 or 1})
             end
@@ -2945,10 +2965,6 @@ local Library; do
                 local Strings = Flags["WatermarkSettings"] or {}
 
                 local Parts = {}
-
-                if table.find(Strings, "Title") then
-                    table.insert(Parts, Cfg.Suffix)
-                end
 
                 if table.find(Strings, "Fps") then
                     table.insert(Parts, FPS .. " fps")
@@ -2974,26 +2990,23 @@ local Library; do
                     table.insert(Parts, os.date("%b %d, %Y"))
                 end
 
-                local FinalText = table.concat(Parts, " | ")
+                local statsText = table.concat(Parts, " | ")
 
-                Items.WatermarkTitle.Instance.Text = string.format(
-                    '%s<font color = "rgb(%s, %s, %s)">%s</font>', 
-                    table.find(Strings, "Title") and Cfg.Prefix or "", 
-                    math.floor(Themes.Preset.TextMain.R * 255),
-                    math.floor(Themes.Preset.TextMain.G * 255), 
-                    math.floor(Themes.Preset.TextMain.B * 255), 
-                    FinalText
-                )
+                if table.find(Strings, "Title") then
+                    Items.WatermarkTitle.Instance.Text = Cfg.FormatBrandText(
+                        statsText ~= "" and ("| " .. statsText) or nil
+                    )
+                else
+                    local Main = Themes.Preset.TextMain
 
-                Items.Title.Instance.Text = string.format(
-                    '%s<font color = "rgb(%s, %s, %s)">%s ~ %s</font>', 
-                    Cfg.Prefix, 
-                    math.floor(Themes.Preset.TextMain.R * 255),
-                    math.floor(Themes.Preset.TextMain.G * 255), 
-                    math.floor(Themes.Preset.TextMain.B * 255), 
-                    Cfg.Suffix,
-                    os.date("%b %d, %Y")
-                )
+                    Items.WatermarkTitle.Instance.Text = statsText ~= "" and string.format(
+                        '<font color="rgb(%d,%d,%d)">%s</font>',
+                        math.floor(Main.R * 255), math.floor(Main.G * 255), math.floor(Main.B * 255),
+                        statsText
+                    ) or ""
+                end
+
+                Items.Title.Instance.Text = Cfg.FormatBrandText("~ " .. os.date("%b %d, %Y"))
             end)
 
             return Library.Window
@@ -3178,6 +3191,149 @@ local Library; do
             Cfg.OldSection = Cfg.Sections[1]
 
             return unpack(Cfg.Sections)
+        end 
+
+        Library.AddGroup = function(self, Data)
+            Data = Data or {}
+
+            local Cfg = {
+                Indent = Data.Indent or Data.Offset or 20,
+                Visible = Data.Visible ~= false,
+                Tweening = false,
+                ActiveTweens = {},
+
+                Items = {},
+                Names = self.Names or {},
+                Elements = self.Elements or {},
+                DataElements = self.DataElements or {},
+                SeperatedElements = self.SeperatedElements or {},
+            }
+
+            local lineOffset = math.max(4, math.floor(Cfg.Indent / 2))
+
+            local Items = Cfg.Items; do
+                Items.Holder = Library:Create("Frame",{Visible = Cfg.Visible; Parent = self.Items.Elements.Instance; BackgroundTransparency = 1; Size = UDim2.new(1, 0, 0, 0); BorderSizePixel = 0; AutomaticSize = Enum.AutomaticSize.Y; BackgroundColor3 = Color3.fromRGB(255, 255, 255)})
+
+                Items.Content = Library:Create("CanvasGroup",{Parent = Items.Holder.Instance; BackgroundTransparency = 1; Size = UDim2.new(1, 0, 0, 0); BorderSizePixel = 0; AutomaticSize = Enum.AutomaticSize.Y; BackgroundColor3 = Color3.fromRGB(255, 255, 255)})
+
+                Items.IndentLine = Library:Create("Frame",{Parent = Items.Content.Instance; Position = UDim2.new(0, lineOffset, 0, 0); Size = UDim2.new(0, 1, 1, 0); BorderSizePixel = 0; BackgroundColor3 = Themes.Preset.Inline}):Themify("Inline", "BackgroundColor3")
+
+                local ElementsHolder = Items.Content:CreateElements({
+                    Parent = Items.Content.Instance,
+                    Position = UDim2.new(0, Cfg.Indent, 0, 0),
+                    Size = UDim2.new(1, -Cfg.Indent, 0, 0)
+                })
+
+                Items.Elements = ElementsHolder.Items.Elements
+            end
+
+            local function getContentHeight()
+                local Holder = Items.Holder.Instance
+                local Content = Items.Content.Instance
+
+                Holder.Visible = true
+                Holder.AutomaticSize = Enum.AutomaticSize.Y
+                Holder.Size = UDim2.new(1, 0, 0, 0)
+                Content.AutomaticSize = Enum.AutomaticSize.Y
+                Content.Size = UDim2.new(1, 0, 0, 0)
+
+                return math.max(Content.AbsoluteSize.Y, Items.Elements.Instance.AbsoluteSize.Y, 1)
+            end
+
+            local function stopTweens()
+                for _, tween in Cfg.ActiveTweens do
+                    pcall(function()
+                        tween:Cancel()
+                    end)
+                end
+
+                table.clear(Cfg.ActiveTweens)
+                Cfg.Tweening = false
+            end
+
+            local function trackTween(tween)
+                table.insert(Cfg.ActiveTweens, tween)
+            end
+
+            Cfg.SetVisible = function(Self, Bool)
+                if type(Self) ~= "table" then
+                    Bool = Self
+                end
+
+                if Cfg.Visible == Bool and not Cfg.Tweening then
+                    return
+                end
+
+                stopTweens()
+
+                Cfg.Visible = Bool
+                Cfg.Tweening = true
+
+                local Holder = Items.Holder.Instance
+                local Content = Items.Content.Instance
+                local speed = math.min(Library.TweeningSpeed, 0.18)
+                local expandInfo = TweenInfo.new(speed, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0)
+                local collapseInfo = TweenInfo.new(speed, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0)
+
+                Holder.ClipsDescendants = true
+                Holder.AutomaticSize = Enum.AutomaticSize.None
+                Holder.Visible = true
+
+                local function finish(Bool)
+                    if Cfg.Visible ~= Bool then
+                        return
+                    end
+
+                    if Bool then
+                        Holder.ClipsDescendants = false
+                        Holder.AutomaticSize = Enum.AutomaticSize.Y
+                        Holder.Size = UDim2.new(1, 0, 0, 0)
+                    else
+                        Holder.Visible = false
+                        Content.GroupTransparency = 0
+                        Holder.ClipsDescendants = false
+                        Holder.AutomaticSize = Enum.AutomaticSize.Y
+                        Holder.Size = UDim2.new(1, 0, 0, 0)
+                    end
+
+                    Cfg.Tweening = false
+                    table.clear(Cfg.ActiveTweens)
+                end
+
+                if Bool then
+                    local targetHeight = getContentHeight()
+                    local currentHeight = math.max(Holder.AbsoluteSize.Y, 0)
+
+                    Content.GroupTransparency = math.clamp(Content.GroupTransparency, 0, 1)
+                    Holder.Size = UDim2.new(1, 0, 0, currentHeight)
+
+                    trackTween(Items.Holder:Tween({ Size = UDim2.new(1, 0, 0, targetHeight) }, expandInfo))
+                    local fadeTween = Items.Content:Tween({ GroupTransparency = 0 }, expandInfo)
+                    trackTween(fadeTween)
+
+                    Library:Connect(fadeTween.Completed, function()
+                        finish(true)
+                    end)
+                else
+                    local currentHeight = Holder.AbsoluteSize.Y
+
+                    if currentHeight <= 0 then
+                        currentHeight = getContentHeight()
+                    end
+
+                    Holder.Size = UDim2.new(1, 0, 0, currentHeight)
+
+                    trackTween(Items.Holder:Tween({ Size = UDim2.new(1, 0, 0, 0) }, collapseInfo))
+                    local fadeTween = Items.Content:Tween({ GroupTransparency = 1 }, collapseInfo)
+                    trackTween(fadeTween)
+
+                    Library:Connect(fadeTween.Completed, function()
+                        finish(false)
+                    end)
+                end
+            end
+
+            return setmetatable(Cfg, Library)
         end 
 
         Library.AddMultiPage = function(self, Data)
@@ -4862,3 +5018,5 @@ local Library; do
         Library:LerpKeybinds()
     end)
 end
+
+return Library
