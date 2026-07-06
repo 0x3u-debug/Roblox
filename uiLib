@@ -3867,7 +3867,7 @@ local Library; do
             return Label
         end
 
-Library.AddKeyPicker = function(self, Data)
+        Library.AddKeyPicker = function(self, Data)
             Data = Data or {}
 
             local Cfg = {
@@ -3882,7 +3882,7 @@ Library.AddKeyPicker = function(self, Data)
 
                 Open = false,
                 Tweening = false,
-                Binding = false, -- Changed from nil to false explicitly
+                Binding,
 
                 Items = {},
                 Type = "KeybindPicker",
@@ -4016,21 +4016,10 @@ Library.AddKeyPicker = function(self, Data)
             end
 
             Items.Value:OnClick(function()
-                -- Set Binding to true so parent elements know to ignore click actions while choosing a key
-                Cfg.Binding = true
-                Items.Value.Instance.Text = "[...]"
-                
-                -- Wrap Key Picker setup inside a brief task deferment to ensure it overrides parent button behavior
-                task.spawn(function()
-                    Keypicker:NewKey()
-                    Cfg.Binding = false
-                end)
+                Keypicker:NewKey()
             end)
 
             Library:Connect(Services.UserInputService.InputBegan, function(Input, GameProcessedEvent)
-                -- Avoid running hotkey toggles if user is currently rebinding a key
-                if Cfg.Binding then return end
-
                 local SelectedKey = Input.UserInputType == Enum.UserInputType.Keyboard and Input.KeyCode or
                 Input.UserInputType
 
@@ -4050,7 +4039,7 @@ Library.AddKeyPicker = function(self, Data)
             end)
 
             Library:Connect(Services.UserInputService.InputEnded, function(Input, GameProcessedEvent)
-                if GameProcessedEvent or Cfg.Binding then
+                if GameProcessedEvent then
                     return
                 end
 
