@@ -3403,15 +3403,15 @@ Library.AddToggle = function(self, Data)
         Items.Inline = Library:Create("Frame",{Parent = Items.Outline.Instance; Position = UDim2.new(0, 1, 0, 1); Size = UDim2.new(1, -2, 1, -2); BorderSizePixel = 0; BackgroundColor3 = Color3.fromRGB(54, 54, 54)})
         Items.Accent = Library:Create("Frame",{Parent = Items.Inline.Instance; BackgroundTransparency = 1; Position = UDim2.new(0, 1, 0, 1); Size = UDim2.new(1, -2, 1, -2); ZIndex = 2; BorderSizePixel = 0; BackgroundColor3 = Themes.Preset.Accent}):Themify("Accent", "BackgroundColor3")
         
-        -- Outer Glow Configured with UIShadow
+        -- Optimized Glow (Softer, tighter bounds to stop clipping)
         Items.Shadow = Library:Create("UIShadow", {
             Parent = Items.Outline.Instance,
-            BlurRadius = UDim.new(0, 6),           -- Sets the blur softness
-            Color = Themes.Preset.Accent,          -- Matches your Accent Color
-            Offset = UDim2.new(0, 0, 0, 0),        -- Centered so it glows outwards evenly
-            Spread = UDim2.new(0, 1, 0, 1),        -- Slightly expands past the outline boundary
-            Transparency = Cfg.Enabled and 0 or 1, -- Matches the initial toggle state
-            ZIndex = -1                            -- Renders safely underneath the toggle
+            BlurRadius = UDim.new(0, 4),             -- Tighter blur radius keeps it from hitting layout edges
+            Color = Themes.Preset.Accent,          
+            Offset = UDim2.new(0, 0, 0, 0),        
+            Spread = UDim2.new(0, 0, 0, 0),          -- Kept at 0 so it doesn't push past the bounding box
+            Transparency = Cfg.Enabled and 0.4 or 1, -- 0.4 makes it a soft, clean aesthetic blend
+            ZIndex = -1                            
         }):Themify("Accent", "Color")
 
         Items.Gray = Library:Create("Frame",{Parent = Items.Inline.Instance; Position = UDim2.new(0, 1, 0, 1); Size = UDim2.new(1, -2, 1, -2); BorderSizePixel = 0; BackgroundColor3 = Color3.fromRGB(255, 255, 255)})
@@ -3421,6 +3421,25 @@ Library.AddToggle = function(self, Data)
         Items.ComponentsHolder = Library:Create("Frame",{Parent = Items.Object.Instance; Position = UDim2.new(1, 0, 0, 0); Size = UDim2.new(0, 0, 0, 14); BorderSizePixel = 0; BackgroundColor3 = Color3.fromRGB(255, 255, 255)})
         Items.UIListLayout = Library:Create("UIListLayout",{VerticalAlignment = Enum.VerticalAlignment.Center; FillDirection = Enum.FillDirection.Horizontal; HorizontalAlignment = Enum.HorizontalAlignment.Right; Parent = Items.ComponentsHolder.Instance; Padding = UDim.new(0, 4); SortOrder = Enum.SortOrder.LayoutOrder})
     end
+
+    Cfg.Set = function(Bool)
+        Items.Accent:Tween({ BackgroundTransparency = Bool and 0 or 1 })
+        Items.Shadow:Tween({ Transparency = Bool and 0.4 or 1 }) -- Tweens to a clean semi-transparent aura
+
+        Flags[Cfg.Flag] = Bool
+        Cfg.Callback(Bool)
+    end
+
+    Items.Object:OnClick(function()
+        Cfg.Enabled = not Cfg.Enabled
+        Cfg.Set(Cfg.Enabled)
+    end)
+
+    local Toggle = setmetatable(Cfg, Library)
+    Toggle:SetupElement(Cfg.Enabled)
+
+    return setmetatable(Cfg, Library)
+end
 
     Cfg.Set = function(Bool)
         Items.Accent:Tween({ BackgroundTransparency = Bool and 0 or 1 })
