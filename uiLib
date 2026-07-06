@@ -3441,25 +3441,6 @@ Library.AddToggle = function(self, Data)
     return setmetatable(Cfg, Library)
 end
 
-    Cfg.Set = function(Bool)
-        Items.Accent:Tween({ BackgroundTransparency = Bool and 0 or 1 })
-        Items.Shadow:Tween({ Transparency = Bool and 0 or 1 }) -- Tweens the glow visibility along with the accent
-
-        Flags[Cfg.Flag] = Bool
-        Cfg.Callback(Bool)
-    end
-
-    Items.Object:OnClick(function()
-        Cfg.Enabled = not Cfg.Enabled
-        Cfg.Set(Cfg.Enabled)
-    end)
-
-    local Toggle = setmetatable(Cfg, Library)
-    Toggle:SetupElement(Cfg.Enabled)
-
-    return setmetatable(Cfg, Library)
-end
-
         Library.AddSlider = function(self, Data)
             Data = Data or {}
 
