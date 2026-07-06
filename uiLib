@@ -1,13 +1,3 @@
---[[
-    NAME: Peronahax
-    FOR: All
-    
-    BASE: 
-    AUTO UPDATE PARENT COLORPICKER WITH REPARENTING FUCN
-    ADD A LISTENER FUNCTION FOR AUTO THEMING TWEENING ACCENT ITEMS <-- AUTOMATE
-    AUTOMATE CLAMPING ON FOR SETVISIBLE NEW UIS 
-
-]]
 
 -- Variables
     local ServiceCache = {};     -- Cloneref bypass
@@ -1789,16 +1779,16 @@ local Library; do
                 YOffset = 0
                 BiggestX = 0
 
-                if not self.Window.KeybindListVisible then 
-                    return 
-                end 
+if not self.Window or not self.Window.KeybindListVisible then
+    return
+end
 
                 local Tick = tick()
                 for _,Object in self.Keybinds do
                     Object.Fade = Library:Lerp(Object.Fade, Object.Status and 255 or 0, 0.02)  
                     local Instance = Object.Items.Keybind.Instance
 
-                    local Offset = UDim2.new(0, 1, 0, 0) -- great pasting skills
+                    local Offset = UDim2.new(0, 1, 0, 0)
                     local Transparency = 1 - (1 * (Object.Fade / 255))
                     
                     Instance.Position = Offset + UDim2.new(0, -(Instance.AbsoluteSize.X - (Instance.AbsoluteSize.X * (Object.Fade / 255))), 0, YOffset)
