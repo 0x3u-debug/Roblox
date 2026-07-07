@@ -539,85 +539,17 @@ local Library; do
     -- // Element Side functions
     do
         -- // Window    
-
-        -- // Element Side functions
-    do
-        local TweenService = game:GetService("TweenService")
+local TweenService = game:GetService("TweenService")
         local Lighting = game:GetService("Lighting")
 
-        -- Unique full-screen layer for our cinematic effects
-        local EffectGui = Library:Create("ScreenGui", {
-            Parent = Services.CoreGui,
-            Name = "BackgroundEffects",
-            Enabled = false,
-            IgnoreGuiInset = true,
-            ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-            DisplayOrder = 99 -- Stays right behind your main menu elements (100)
-        })
-
-        -- Fullscreen dark vignette cover
-        local DarkOverlay = Library:Create("Frame", {
-            Parent = EffectGui.Instance,
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ZIndex = 1
-        })
-
-        -- Workspace 3D Depth Blur Effect
-        local BackgroundBlur = Instance.new("BlurEffect")
-        BackgroundBlur.Size = 0
-        BackgroundBlur.Enabled = false
-        BackgroundBlur.Parent = Lighting
-
-        -- Track particles in an indexed table for high performance loops
+        -- Persistent references for the runtime instances
+        local EffectGui
+        local DarkOverlay
+        local BackgroundBlur
         local Particles = {}
-        local MaxParticles = 65 
-
-        -- Pre-populate our particle system with depth layering
-        for i = 1, MaxParticles do
-            local Layer = math.random(1, 3) -- 1 = Far/Small, 2 = Mid/Medium, 3 = Close/Large
-            local Size, Speed, Transparency
-            
-            if Layer == 1 then
-                Size = math.random(2, 3)
-                Speed = math.random(15, 30)
-                Transparency = math.random(65, 80) / 100
-            elseif Layer == 2 then
-                Size = math.random(4, 5)
-                Speed = math.random(45, 75)
-                Transparency = math.random(40, 55) / 100
-            else
-                Size = math.random(6, 7)
-                Speed = math.random(90, 135)
-                Transparency = math.random(20, 35) / 100
-            end
-            
-            local ParticleFrame = Library:Create("Frame", {
-                Parent = EffectGui.Instance,
-                Size = UDim2.new(0, Size, 0, Size),
-                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-                BackgroundTransparency = Transparency,
-                BorderSizePixel = 0,
-                Position = UDim2.new(math.random(), 0, math.random(), 0), -- Random starting spots
-                ZIndex = 2
-            })
-            
-            Library:Create("UICorner", {
-                CornerRadius = UDim.new(1, 0),
-                Parent = ParticleFrame.Instance
-            })
-            
-            table.insert(Particles, {
-                Frame = ParticleFrame.Instance,
-                Speed = Speed,
-                Size = Size
-            })
-        end
-
-        -- Frame-independent parallax update loop
         local ParticleConnection
+        local MaxParticles = 65
+
         local function StartParticles()
             if ParticleConnection then return end
             ParticleConnection = Services.RunService.Heartbeat:Connect(function(Delta)
@@ -627,7 +559,6 @@ local Library; do
                     local CurrentPos = Particle.Frame.Position
                     local NewYOffset = CurrentPos.Y.Offset + (Particle.Speed * Delta)
                     
-                    -- Reset dot back to the top when it falls out of screen boundaries
                     if NewYOffset > ScreenSize.Y then
                         NewYOffset = -20
                         Particle.Frame.Position = UDim2.new(math.random(), 0, 0, NewYOffset)
@@ -656,24 +587,91 @@ local Library; do
             self.Open = Bool  
 
             if Bool then
-                -- Enable screens & blur rendering engine
+                -- Build the background assets using your framework's native colon syntax the first time the menu opens
+                if not EffectGui then
+                    EffectGui = Library:Create("ScreenGui", {
+                        Parent = Services.CoreGui,
+                        Name = "BackgroundEffects",
+                        Enabled = false,
+                        IgnoreGuiInset = true,
+                        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+                        DisplayOrder = 99
+                    })
+
+                    DarkOverlay = Library:Create("Frame", {
+                        Parent = EffectGui.Instance,
+                        Size = UDim2.new(1, 0, 1, 0),
+                        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+                        BackgroundTransparency = 1,
+                        BorderSizePixel = 0,
+                        ZIndex = 1
+                    })
+
+                    BackgroundBlur = Instance.new("BlurEffect")
+                    BackgroundBlur.Size = 0
+                    BackgroundBlur.Enabled = false
+                    BackgroundBlur.Parent = Lighting
+
+                    -- Dynamic particle pool generation
+                    for i = 1, MaxParticles do
+                        local Layer = math.random(1, 3)
+                        local Size, Speed, Transparency
+                        
+                        if Layer == 1 then
+                            Size = math.random(2, 3)
+                            Speed = math.random(15, 30)
+                            Transparency = math.random(65, 80) / 100
+                        elseif Layer == 2 then
+                            Size = math.random(4, 5)
+                            Speed = math.random(45, 75)
+                            Transparency = math.random(40, 55) / 100
+                        else
+                            Size = math.random(6, 7)
+                            Speed = math.random(90, 135)
+                            Transparency = math.random(20, 35) / 100
+                        end
+                        
+                        local ParticleFrame = Library:Create("Frame", {
+                            Parent = EffectGui.Instance,
+                            Size = UDim2.new(0, Size, 0, Size),
+                            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                            BackgroundTransparency = Transparency,
+                            BorderSizePixel = 0,
+                            Position = UDim2.new(math.random(), 0, math.random(), 0),
+                            ZIndex = 2
+                        })
+                        
+                        Library:Create("UICorner", {
+                            CornerRadius = UDim.new(1, 0),
+                            Parent = ParticleFrame.Instance
+                        })
+                        
+                        table.insert(Particles, {
+                            Frame = ParticleFrame.Instance,
+                            Speed = Speed,
+                            Size = Size
+                        })
+                    end
+                end
+
+                -- Turn everything on and trigger transitions
                 EffectGui.Instance.Enabled = true
                 BackgroundBlur.Enabled = true
                 
-                -- Smoothly ease visuals into the screen space
                 TweenService:Create(DarkOverlay.Instance, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.5}):Play()
                 TweenService:Create(BackgroundBlur, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 14}):Play()
                 
                 StartParticles()
             else
-                -- Smoothly ease visuals out of the screen space
+                -- If menu is closed and assets were never made, stop here
+                if not EffectGui then return end
+
                 local OverlayTween = TweenService:Create(DarkOverlay.Instance, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
                 local BlurTween = TweenService:Create(BackgroundBlur, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 0})
                 
                 OverlayTween:Play()
                 BlurTween:Play()
                 
-                -- Clean up heavy background cycles completely when fade transitions finish
                 OverlayTween.Completed:Connect(function()
                     if not self.Open then
                         EffectGui.Instance.Enabled = false
@@ -683,7 +681,6 @@ local Library; do
                 end)
             end
         end
-    end
 
         -- // Page
         Library.CheckPriority = function(self)
@@ -1933,7 +1930,7 @@ end
                     Object.Fade = Library:Lerp(Object.Fade, Object.Status and 255 or 0, 0.02)  
                     local Instance = Object.Items.Keybind.Instance
 
-                    local Offset = UDim2.new(0, 1, 0, 0)
+                    local Offset = UDim2.new(0, 1, 0, 0) -- great pasting skills
                     local Transparency = 1 - (1 * (Object.Fade / 255))
                     
                     Instance.Position = Offset + UDim2.new(0, -(Instance.AbsoluteSize.X - (Instance.AbsoluteSize.X * (Object.Fade / 255))), 0, YOffset)
