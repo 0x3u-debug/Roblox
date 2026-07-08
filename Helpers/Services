@@ -1,6 +1,8 @@
+local cloneref = cloneref or function(service) return service end
+
 local Services = setmetatable({}, {
     __index = function(self, serviceName)
-        local service = game:GetService(serviceName)
+        local service = cloneref(game:GetService(serviceName))
         rawset(self, serviceName, service)
         return service
     end
