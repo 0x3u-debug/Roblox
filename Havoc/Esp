@@ -170,14 +170,14 @@ local ESPFunction = function(char)
     local Distance = Functions:Create("TextLabel", {Parent = container, Position = UDim2.new(0.5, 0, 0, 11), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
     local Weapon = Functions:Create("TextLabel", {Parent = container, Position = UDim2.new(0.5, 0, 0, 31), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
     local Box = Functions:Create("Frame", {Parent = container, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0})
-    local FillGradient = Functions:Create("UIGradient", {Parent = Box, Enabled = ESP.Drawing.Filled.Gradient, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Filled.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Filled.GradientRGB2)}})
-    local OutlineStroke = Functions:Create("UIStroke", {Parent = Box, Enabled = true, Transparency = ESP.Drawing.Box.Transparency, Color = ESP.Drawing.Box.Color, Thickness = ESP.Drawing.Box.Thickness, LineJoinMode = Enum.LineJoinMode.Miter})
-    local OutlineGradient = Functions:Create("UIGradient", {Parent = OutlineStroke, Enabled = ESP.Drawing.Box.Gradient, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Box.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Box.GradientRGB2)}})
+    local FillGradient = Functions:Create("UIGradient", {Parent = Box, Enabled = false, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Filled.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Filled.GradientRGB2)}})
+    local OutlineStroke = Functions:Create("UIStroke", {Parent = Box, Enabled = true, Transparency = 0, Color = Color3.fromRGB(255, 255, 255), Thickness = 1, LineJoinMode = Enum.LineJoinMode.Miter})
+    local OutlineGradient = Functions:Create("UIGradient", {Parent = OutlineStroke, Enabled = false, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255,255,255))}})
     local Healthbar = Functions:Create("Frame", {Parent = container, BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0})
     local BehindHealthbar = Functions:Create("Frame", {Parent = container, ZIndex = -1, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0})
-    local HealthbarGradient = Functions:Create("UIGradient", {Parent = Healthbar, Enabled = ESP.Drawing.Healthbar.Gradient, Rotation = -90, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Healthbar.GradientRGB1), ColorSequenceKeypoint.new(0.5, ESP.Drawing.Healthbar.GradientRGB2), ColorSequenceKeypoint.new(1, ESP.Drawing.Healthbar.GradientRGB3)}})
+    local HealthbarGradient = Functions:Create("UIGradient", {Parent = Healthbar, Enabled = false, Rotation = -90, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255,255,255))}})
     local HealthText = Functions:Create("TextLabel", {Parent = container, Position = UDim2.new(0.5, 0, 0, 31), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0)})
-    local Chams = Functions:Create("Highlight", {Parent = container, FillTransparency = 1, OutlineTransparency = 0, OutlineColor = Color3.fromRGB(119, 120, 255), DepthMode = "AlwaysOnTop"})
+    local Chams = Functions:Create("Highlight", {Parent = container, FillTransparency = 1, OutlineTransparency = 1, OutlineColor = Color3.fromRGB(119, 120, 255), DepthMode = "AlwaysOnTop"})
     local LeftTop = Functions:Create("Frame", {Parent = container, BackgroundColor3 = ESP.Drawing.Corner.Color, BackgroundTransparency = ESP.Drawing.Corner.Transparency, Position = UDim2.new(0, 0, 0, 0)})
     local LeftSide = Functions:Create("Frame", {Parent = container, BackgroundColor3 = ESP.Drawing.Corner.Color, BackgroundTransparency = ESP.Drawing.Corner.Transparency, Position = UDim2.new(0, 0, 0, 0)})
     local RightTop = Functions:Create("Frame", {Parent = container, BackgroundColor3 = ESP.Drawing.Corner.Color, BackgroundTransparency = ESP.Drawing.Corner.Transparency, Position = UDim2.new(0, 0, 0, 0)})
@@ -291,6 +291,9 @@ local ESPFunction = function(char)
                         local breathe_effect = math.atan(math.sin(tick() * 2)) * 2 / math.pi
                         Chams.FillTransparency = ESP.Drawing.Chams.Fill_Transparency * breathe_effect * 0.01
                         Chams.OutlineTransparency = ESP.Drawing.Chams.Outline_Transparency * breathe_effect * 0.01
+                    else
+                        Chams.FillTransparency = 1
+                        Chams.OutlineTransparency = 0
                     end
                     if ESP.Drawing.Chams.VisibleCheck then
                         Chams.DepthMode = "Occluded"
@@ -302,40 +305,56 @@ local ESPFunction = function(char)
                     LeftTop.Visible = ESP.Drawing.Corner.Enabled
                     LeftTop.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y - h / 2)
                     LeftTop.Size = UDim2.new(0, w / cornerLen, 0, 1)
+                    LeftTop.BackgroundColor3 = ESP.Drawing.Corner.Color
+                    LeftTop.BackgroundTransparency = ESP.Drawing.Corner.Transparency
                     
                     LeftSide.Visible = ESP.Drawing.Corner.Enabled
                     LeftSide.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y - h / 2)
                     LeftSide.Size = UDim2.new(0, 1, 0, h / cornerLen)
+                    LeftSide.BackgroundColor3 = ESP.Drawing.Corner.Color
+                    LeftSide.BackgroundTransparency = ESP.Drawing.Corner.Transparency
                     
                     BottomSide.Visible = ESP.Drawing.Corner.Enabled
                     BottomSide.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y + h / 2)
                     BottomSide.Size = UDim2.new(0, 1, 0, h / cornerLen)
                     BottomSide.AnchorPoint = Vector2.new(0, 5)
+                    BottomSide.BackgroundColor3 = ESP.Drawing.Corner.Color
+                    BottomSide.BackgroundTransparency = ESP.Drawing.Corner.Transparency
                     
                     BottomDown.Visible = ESP.Drawing.Corner.Enabled
                     BottomDown.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y + h / 2)
                     BottomDown.Size = UDim2.new(0, w / cornerLen, 0, 1)
                     BottomDown.AnchorPoint = Vector2.new(0, 1)
+                    BottomDown.BackgroundColor3 = ESP.Drawing.Corner.Color
+                    BottomDown.BackgroundTransparency = ESP.Drawing.Corner.Transparency
                     
                     RightTop.Visible = ESP.Drawing.Corner.Enabled
                     RightTop.Position = UDim2.new(0, Pos.X + w / 2, 0, Pos.Y - h / 2)
                     RightTop.Size = UDim2.new(0, w / cornerLen, 0, 1)
                     RightTop.AnchorPoint = Vector2.new(1, 0)
+                    RightTop.BackgroundColor3 = ESP.Drawing.Corner.Color
+                    RightTop.BackgroundTransparency = ESP.Drawing.Corner.Transparency
                     
                     RightSide.Visible = ESP.Drawing.Corner.Enabled
                     RightSide.Position = UDim2.new(0, Pos.X + w / 2 - 1, 0, Pos.Y - h / 2)
                     RightSide.Size = UDim2.new(0, 1, 0, h / cornerLen)
                     RightSide.AnchorPoint = Vector2.new(0, 0)
+                    RightSide.BackgroundColor3 = ESP.Drawing.Corner.Color
+                    RightSide.BackgroundTransparency = ESP.Drawing.Corner.Transparency
                     
                     BottomRightSide.Visible = ESP.Drawing.Corner.Enabled
                     BottomRightSide.Position = UDim2.new(0, Pos.X + w / 2, 0, Pos.Y + h / 2)
                     BottomRightSide.Size = UDim2.new(0, 1, 0, h / cornerLen)
                     BottomRightSide.AnchorPoint = Vector2.new(1, 1)
+                    BottomRightSide.BackgroundColor3 = ESP.Drawing.Corner.Color
+                    BottomRightSide.BackgroundTransparency = ESP.Drawing.Corner.Transparency
                     
                     BottomRightDown.Visible = ESP.Drawing.Corner.Enabled
                     BottomRightDown.Position = UDim2.new(0, Pos.X + w / 2, 0, Pos.Y + h / 2)
                     BottomRightDown.Size = UDim2.new(0, w / cornerLen, 0, 1)
                     BottomRightDown.AnchorPoint = Vector2.new(1, 1)
+                    BottomRightDown.BackgroundColor3 = ESP.Drawing.Corner.Color
+                    BottomRightDown.BackgroundTransparency = ESP.Drawing.Corner.Transparency
 
                     Box.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y - h / 2)
                     Box.Size = UDim2.new(0, w, 0, h)
@@ -345,8 +364,14 @@ local ESPFunction = function(char)
                         Box.BackgroundColor3 = ESP.Drawing.Filled.Color
                         Box.BackgroundTransparency = ESP.Drawing.Filled.Transparency
                         Box.BorderSizePixel = 0
+                        FillGradient.Enabled = ESP.Drawing.Filled.Gradient
+                        if ESP.Drawing.Filled.Gradient then
+                            FillGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Filled.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Filled.GradientRGB2)}
+                            FillGradient.Rotation = ESP.Drawing.Filled.Animate and RotationAngle or -45
+                        end
                     else
                         Box.BackgroundTransparency = 1
+                        FillGradient.Enabled = false
                     end
 
                     OutlineStroke.Enabled = ESP.Drawing.Box.Enabled
@@ -354,17 +379,17 @@ local ESPFunction = function(char)
                     OutlineStroke.Transparency = ESP.Drawing.Box.Transparency
                     OutlineStroke.Thickness = ESP.Drawing.Box.Thickness
 
-                    if ESP.Drawing.Box.Animate then
-                        RotationAngle = RotationAngle + (tick() - Tick) * ESP.Drawing.Box.RotationSpeed * math.cos(math.pi / 4 * tick() - math.pi / 2)
-                        OutlineGradient.Rotation = RotationAngle
-                    else
-                        OutlineGradient.Rotation = -45
+                    OutlineGradient.Enabled = ESP.Drawing.Box.Gradient
+                    if ESP.Drawing.Box.Gradient then
+                        OutlineGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Box.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Box.GradientRGB2)}
+                        if ESP.Drawing.Box.Animate then
+                            RotationAngle = RotationAngle + (tick() - Tick) * ESP.Drawing.Box.RotationSpeed * math.cos(math.pi / 4 * tick() - math.pi / 2)
+                            OutlineGradient.Rotation = RotationAngle
+                        else
+                            OutlineGradient.Rotation = -45
+                        end
                     end
-                    if ESP.Drawing.Filled.Animate then
-                        FillGradient.Rotation = RotationAngle
-                    else
-                        FillGradient.Rotation = -45
-                    end
+
                     Tick = tick()
 
                     local health = Humanoid.Health / Humanoid.MaxHealth
@@ -375,6 +400,11 @@ local ESPFunction = function(char)
                     BehindHealthbar.Visible = ESP.Drawing.Healthbar.Enabled
                     BehindHealthbar.Position = UDim2.new(0, Pos.X - w / 2 - 6, 0, Pos.Y - h / 2)  
                     BehindHealthbar.Size = UDim2.new(0, ESP.Drawing.Healthbar.Width, 0, h)
+
+                    HealthbarGradient.Enabled = ESP.Drawing.Healthbar.Gradient
+                    if ESP.Drawing.Healthbar.Gradient then
+                        HealthbarGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Healthbar.GradientRGB1), ColorSequenceKeypoint.new(0.5, ESP.Drawing.Healthbar.GradientRGB2), ColorSequenceKeypoint.new(1, ESP.Drawing.Healthbar.GradientRGB3)}
+                    end
                     
                     if ESP.Drawing.Healthbar.HealthText then
                         local healthPercentage = math.floor(Humanoid.Health / Humanoid.MaxHealth * 100)
@@ -387,6 +417,8 @@ local ESPFunction = function(char)
                         else
                             HealthText.TextColor3 = ESP.Drawing.Healthbar.HealthTextRGB
                         end
+                    else
+                        HealthText.Visible = false
                     end
 
                     Name.Visible = ESP.Drawing.Names.Enabled
