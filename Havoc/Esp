@@ -433,20 +433,22 @@ local ESPFunction = function(char)
     coroutine.wrap(Updater)()
 end
 
-for _, child in pairs(npcContainer:GetChildren()) do
-    if child:IsA("Model") and child:FindFirstChild("HumanoidRootPart") and child:FindFirstChild("Humanoid") then
-        if child ~= lplayer.Character then
-            coroutine.wrap(ESPFunction)(child)
+if npcContainer then
+    for _, child in pairs(npcContainer:GetChildren()) do
+        if child:IsA("Model") and child:FindFirstChild("HumanoidRootPart") and child:FindFirstChild("Humanoid") then
+            if child ~= lplayer.Character then
+                coroutine.wrap(ESPFunction)(child)
+            end
         end
     end
-end
 
-npcContainer.ChildAdded:Connect(function(child)
-    if child:IsA("Model") and child:FindFirstChild("HumanoidRootPart") and child:FindFirstChild("Humanoid") then
-        if child ~= lplayer.Character then
-            coroutine.wrap(ESPFunction)(child)
+    npcContainer.ChildAdded:Connect(function(child)
+        if child:IsA("Model") and child:FindFirstChild("HumanoidRootPart") and child:FindFirstChild("Humanoid") then
+            if child ~= lplayer.Character then
+                coroutine.wrap(ESPFunction)(child)
+            end
         end
-    end
-end)
+    end)
+end
 
 return ESP
