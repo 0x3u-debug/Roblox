@@ -1,14 +1,14 @@
 local Workspace, RunService, Players, CoreGui, Lighting = cloneref(game:GetService("Workspace")), cloneref(game:GetService("RunService")), cloneref(game:GetService("Players")), game:GetService("CoreGui"), cloneref(game:GetService("Lighting"))
 
 local ESP = {
-    Enabled = false,
+    Enabled = true,
     TeamCheck = false,
     MaxDistance = 1000,
     FontSize = 11,
-    ShowNpc = false,
+    ShowNpc = true,
     FadeOut = {
         OnDistance = false,
-        OnDeath = false,
+        OnDeath = true,
         OnLeave = false,
     },
     Options = { 
@@ -18,7 +18,7 @@ local ESP = {
     },
     Drawing = {
         Chams = {
-            Enabled  = false,
+            Enabled  = true,
             Thermal = false,
             FillRGB = Color3.fromRGB(119, 120, 255),
             Fill_Transparency = 100,
@@ -27,25 +27,25 @@ local ESP = {
             VisibleCheck = false,
         },
         Names = {
-            Enabled = false,
+            Enabled = true,
             RGB = Color3.fromRGB(255, 255, 255),
         },
         Flags = {
             Enabled = false,
         },
         Distances = {
-            Enabled = false, 
+            Enabled = true, 
             Position = "Bottom",
             RGB = Color3.fromRGB(255, 255, 255),
         },
         Weapons = {
-            Enabled = false, WeaponTextRGB = Color3.fromRGB(119, 120, 255),
+            Enabled = true, WeaponTextRGB = Color3.fromRGB(119, 120, 255),
             Outlined = false,
             Gradient = false,
             GradientRGB1 = Color3.fromRGB(255, 255, 255), GradientRGB2 = Color3.fromRGB(119, 120, 255),
         },
         Healthbar = {
-            Enabled = false,  
+            Enabled = true,  
             HealthText = false, Lerp = false, HealthTextRGB = Color3.fromRGB(119, 120, 255),
             Width = 2.5,
             Gradient = false, GradientRGB1 = Color3.fromRGB(200, 0, 0), GradientRGB2 = Color3.fromRGB(60, 60, 125), GradientRGB3 = Color3.fromRGB(119, 120, 255), 
@@ -62,7 +62,7 @@ local ESP = {
             GradientRGB2 = Color3.fromRGB(0, 0, 0),
         },
         Corner = {
-            Enabled = false,
+            Enabled = true,
             Color = Color3.fromRGB(255, 255, 255),
             Transparency = 0,
             Length = 5,
@@ -79,17 +79,18 @@ local ESP = {
             RotationSpeed = 300,
         },
         States = {
-            Enabled = false,
+            Enabled = true,
         },
     };
     Connections = {
         RunService = RunService;
     };
-    Fonts = { };
+    Fonts = {};
 }
 
 local Euphoria = ESP.Connections;
 local lplayer = Players.LocalPlayer;
+local camera = Workspace.CurrentCamera;
 local Cam = Workspace.CurrentCamera;
 local RotationAngle, Tick = -45, tick();
 
@@ -152,57 +153,60 @@ do
     end  
 end;
 
+local guiName = "ESPHolder"
+if CoreGui:FindFirstChild(guiName) then
+    CoreGui[guiName]:Destroy()
+end
+
+local ScreenGui = Functions:Create("ScreenGui", {
+    Parent = CoreGui,
+    Name = guiName,
+});
+
 local ESPFunction = function(char)
+    local containerName = char.Name
+    if ScreenGui:FindFirstChild(containerName) then
+        ScreenGui[containerName]:Destroy()
+    end
+
     local isNPC = char:GetAttribute("AI") ~= nil
     if isNPC and not ESP.ShowNpc then
         return
     end
     
-    local HRP = char:WaitForChild("HumanoidRootPart", 5)
-    local Humanoid = char:WaitForChild("Humanoid", 5)
-    if not HRP or not Humanoid then return end
-
     local playerObj = not isNPC and Players:GetPlayerFromCharacter(char) or nil
 
-    local BBG = Functions:Create("BillboardGui", {
-        Parent = CoreGui,
-        Name = char.Name .. "_BBG",
-        Adornee = HRP,
-        Size = UDim2.new(0, 200, 0, 200),
-        AlwaysOnTop = true,
-        ResetOnSpawn = false
-    })
-
-    local MainFrame = Functions:Create("Frame", {
-        Parent = BBG,
+    local container = Functions:Create("Frame", {
+        Parent = ScreenGui,
+        Name = containerName,
+        BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         Position = UDim2.new(0, 0, 0, 0),
-        BackgroundTransparency = 1
     })
 
-    local Name = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
-    local Weapon = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(119, 120, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
-    local Distance = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
-    local StateLabel = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "", Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true, TextXAlignment = Enum.TextXAlignment.Center})
-    local Box = Functions:Create("Frame", {Parent = MainFrame, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0})
+    local Name = Functions:Create("TextLabel", {Parent = container, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
+    local Weapon = Functions:Create("TextLabel", {Parent = container, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(119, 120, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
+    local Distance = Functions:Create("TextLabel", {Parent = container, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
+    local StateLabel = Functions:Create("TextLabel", {Parent = container, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true, TextXAlignment = Enum.TextXAlignment.Center})
+    local Box = Functions:Create("Frame", {Parent = container, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0})
     local FillGradient = Functions:Create("UIGradient", {Parent = Box, Enabled = ESP.Drawing.Filled.Gradient, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Filled.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Filled.GradientRGB2)}})
     local OutlineStroke = Functions:Create("UIStroke", {Parent = Box, Enabled = true, Transparency = ESP.Drawing.Box.Transparency, Color = ESP.Drawing.Box.Color, Thickness = ESP.Drawing.Box.Thickness, LineJoinMode = Enum.LineJoinMode.Miter})
     local OutlineGradient = Functions:Create("UIGradient", {Parent = OutlineStroke, Enabled = ESP.Drawing.Box.Gradient, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Box.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Box.GradientRGB2)}})
-    local Healthbar = Functions:Create("Frame", {Parent = MainFrame, BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0, BorderSizePixel = 0})
-    local BehindHealthbar = Functions:Create("Frame", {Parent = MainFrame, ZIndex = -1, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0, BorderSizePixel = 0})
+    local Healthbar = Functions:Create("Frame", {Parent = container, BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0, BorderSizePixel = 0})
+    local BehindHealthbar = Functions:Create("Frame", {Parent = container, ZIndex = -1, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0, BorderSizePixel = 0})
     local HealthbarGradient = Functions:Create("UIGradient", {Parent = Healthbar, Enabled = ESP.Drawing.Healthbar.Gradient, Rotation = -90, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Healthbar.GradientRGB1), ColorSequenceKeypoint.new(0.5, ESP.Drawing.Healthbar.GradientRGB2), ColorSequenceKeypoint.new(1, ESP.Drawing.Healthbar.GradientRGB3)}})
-    local HealthText = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0)})
-    local Chams = Functions:Create("Highlight", {Parent = MainFrame, FillTransparency = 1, OutlineTransparency = 0, OutlineColor = Color3.fromRGB(119, 120, 255), DepthMode = "AlwaysOnTop"})
+    local HealthText = Functions:Create("TextLabel", {Parent = container, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0)})
+    local Chams = Functions:Create("Highlight", {Parent = container, FillTransparency = 1, OutlineTransparency = 0, OutlineColor = Color3.fromRGB(119, 120, 255), DepthMode = "AlwaysOnTop"})
     
     local cColor, cTrans = ESP.Drawing.Corner.Color, ESP.Drawing.Corner.Transparency
-    local LeftTop = Functions:Create("Frame", {Parent = MainFrame, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
-    local LeftSide = Functions:Create("Frame", {Parent = MainFrame, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
-    local RightTop = Functions:Create("Frame", {Parent = MainFrame, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
-    local RightSide = Functions:Create("Frame", {Parent = MainFrame, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
-    local BottomSide = Functions:Create("Frame", {Parent = MainFrame, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
-    local BottomDown = Functions:Create("Frame", {Parent = MainFrame, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
-    local BottomRightSide = Functions:Create("Frame", {Parent = MainFrame, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
-    local BottomRightDown = Functions:Create("Frame", {Parent = MainFrame, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
+    local LeftTop = Functions:Create("Frame", {Parent = container, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
+    local LeftSide = Functions:Create("Frame", {Parent = container, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
+    local RightTop = Functions:Create("Frame", {Parent = container, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
+    local RightSide = Functions:Create("Frame", {Parent = container, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
+    local BottomSide = Functions:Create("Frame", {Parent = container, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
+    local BottomDown = Functions:Create("Frame", {Parent = container, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
+    local BottomRightSide = Functions:Create("Frame", {Parent = container, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
+    local BottomRightDown = Functions:Create("Frame", {Parent = container, BackgroundColor3 = cColor, BackgroundTransparency = cTrans, BorderSizePixel = 0})
 
     local Updater = function()
         local Connection;
@@ -211,10 +215,26 @@ local ESPFunction = function(char)
             if destroyed then return end
             destroyed = true
             Connection:Disconnect()
-            BBG:Destroy()
+            container:Destroy()
         end
         local function HideESP()
-            MainFrame.Visible = false
+            Box.Visible = false;
+            Name.Visible = false;
+            Distance.Visible = false;
+            Weapon.Visible = false;
+            Healthbar.Visible = false;
+            BehindHealthbar.Visible = false;
+            HealthText.Visible = false;
+            LeftTop.Visible = false;
+            LeftSide.Visible = false;
+            BottomSide.Visible = false;
+            BottomDown.Visible = false;
+            RightTop.Visible = false;
+            RightSide.Visible = false;
+            BottomRightSide.Visible = false;
+            BottomRightDown.Visible = false;
+            Chams.Enabled = false;
+            StateLabel.Visible = false;
         end
         Connection = Euphoria.RunService.RenderStepped:Connect(function()
             if destroyed then return end
@@ -222,7 +242,9 @@ local ESPFunction = function(char)
                 DestroyESP()
                 return
             end
-            if not HRP or not Humanoid or not HRP.Parent or not Humanoid.Parent then
+            local HRP = char:FindFirstChild("HumanoidRootPart")
+            local Humanoid = char:FindFirstChild("Humanoid")
+            if not HRP or not Humanoid then
                 HideESP()
                 return
             end
@@ -231,16 +253,14 @@ local ESPFunction = function(char)
             local Dist = (Cam.CFrame.Position - HRP.Position).Magnitude / 3.5714285714
             
             if OnScreen and Dist <= ESP.MaxDistance then
-                MainFrame.Visible = true
+                -- Calculate Box size based on exact 3D heights for perfect scaling
+                local topPos = Cam:WorldToScreenPoint(HRP.Position + Vector3.new(0, 3, 0))
+                local bottomPos = Cam:WorldToScreenPoint(HRP.Position - Vector3.new(0, 3.5, 0))
                 
-                local factor = 1 / (Pos.Z * math.tan(math.rad(Cam.FieldOfView / 2)) * 2)
-                local h = math.clamp(factor * 1000 * 6.5, 10, 2000)
-                local w = h / 1.75
-                
-                BBG.Size = UDim2.new(0, w * 2, 0, h * 2)
-                
-                local midX = (w * 2) / 2
-                local midY = (h * 2) / 2
+                local h = math.floor(math.abs(topPos.Y - bottomPos.Y))
+                local w = math.floor(h / 1.75) 
+                local posY = math.floor(topPos.Y + (h / 2))
+                local posX = math.floor(Pos.X)
 
                 if ESP.FadeOut.OnDistance then
                     Functions:FadeOutOnDist(Box, Dist)
@@ -269,7 +289,7 @@ local ESPFunction = function(char)
                 elseif not ESP.TeamCheck then
                     show = true
                 else
-                    if playerObj and char.Name ~= lplayer.Name then
+                    if playerObj and playerObj ~= lplayer then
                         local localParty = lplayer:GetAttribute("partyId")
                         local targetParty = playerObj:GetAttribute("partyId")
                         if localParty and targetParty and localParty == targetParty then
@@ -310,7 +330,7 @@ local ESPFunction = function(char)
                         elseif moveDirection > 0.1 then
                             table.insert(states, "Walking")
                         else
-                            table.insert(states, "IDLE")
+                            table.insert(states, "Idle")
                         end
                     end
 
@@ -325,12 +345,12 @@ local ESPFunction = function(char)
                     Name.Visible = ESP.Drawing.Names.Enabled
                     local suffix = isNPC and " [Npc]" or " [Player]"
                     Name.Text = char.Name .. suffix
-                    Name.Position = UDim2.new(0, midX, 0, midY - h/2 - 12)
+                    Name.Position = UDim2.new(0, posX, 0, posY - h/2 - 12)
 
                     Weapon.Visible = ESP.Drawing.Weapons.Enabled
                     local tool = char:FindFirstChildOfClass("Tool")
                     Weapon.Text = tool and cleanWeaponName(tool.Name) or "none"
-                    Weapon.Position = UDim2.new(0, midX, 0, midY + h/2 + 8)
+                    Weapon.Position = UDim2.new(0, posX, 0, posY + h/2 + 8)
 
                     local distanceVisible = ESP.Drawing.Distances.Enabled and ESP.Drawing.Distances.Position == "Bottom"
                     local bottomYOffset = 0
@@ -340,7 +360,7 @@ local ESPFunction = function(char)
                     if distanceVisible then
                         Distance.Visible = true
                         Distance.Text = string.format("%d meters", math.floor(Dist))
-                        Distance.Position = UDim2.new(0, midX, 0, midY + h/2 + 8 + bottomYOffset)
+                        Distance.Position = UDim2.new(0, posX, 0, posY + h/2 + 8 + bottomYOffset)
                         bottomYOffset = bottomYOffset + 12
                     elseif ESP.Drawing.Distances.Enabled and ESP.Drawing.Distances.Position == "Text" then
                         Distance.Visible = false
@@ -358,7 +378,7 @@ local ESPFunction = function(char)
                         end
                         StateLabel.Text = table.concat(formattedStates, " ")
                         StateLabel.Visible = true
-                        StateLabel.Position = UDim2.new(0, midX, 0, midY + h/2 + 8 + bottomYOffset)
+                        StateLabel.Position = UDim2.new(0, posX, 0, posY + h/2 + 8 + bottomYOffset)
                     else
                         StateLabel.Visible = false
                     end
@@ -382,44 +402,44 @@ local ESPFunction = function(char)
                     local t = ESP.Drawing.Corner.Thickness
                     
                     LeftTop.Visible = ESP.Drawing.Corner.Enabled
-                    LeftTop.Position = UDim2.new(0, midX - w / 2, 0, midY - h / 2)
+                    LeftTop.Position = UDim2.new(0, posX - w / 2, 0, posY - h / 2)
                     LeftTop.Size = UDim2.new(0, w / cLen, 0, t)
                     
                     LeftSide.Visible = ESP.Drawing.Corner.Enabled
-                    LeftSide.Position = UDim2.new(0, midX - w / 2, 0, midY - h / 2)
+                    LeftSide.Position = UDim2.new(0, posX - w / 2, 0, posY - h / 2)
                     LeftSide.Size = UDim2.new(0, t, 0, h / cLen)
                     
                     BottomSide.Visible = ESP.Drawing.Corner.Enabled
-                    BottomSide.Position = UDim2.new(0, midX - w / 2, 0, midY + h / 2)
+                    BottomSide.Position = UDim2.new(0, posX - w / 2, 0, posY + h / 2)
                     BottomSide.Size = UDim2.new(0, t, 0, h / cLen)
                     BottomSide.AnchorPoint = Vector2.new(0, 1)
                     
                     BottomDown.Visible = ESP.Drawing.Corner.Enabled
-                    BottomDown.Position = UDim2.new(0, midX - w / 2, 0, midY + h / 2)
+                    BottomDown.Position = UDim2.new(0, posX - w / 2, 0, posY + h / 2)
                     BottomDown.Size = UDim2.new(0, w / cLen, 0, t)
                     BottomDown.AnchorPoint = Vector2.new(0, 1)
                     
                     RightTop.Visible = ESP.Drawing.Corner.Enabled
-                    RightTop.Position = UDim2.new(0, midX + w / 2, 0, midY - h / 2)
+                    RightTop.Position = UDim2.new(0, posX + w / 2, 0, posY - h / 2)
                     RightTop.Size = UDim2.new(0, w / cLen, 0, t)
                     RightTop.AnchorPoint = Vector2.new(1, 0)
                     
                     RightSide.Visible = ESP.Drawing.Corner.Enabled
-                    RightSide.Position = UDim2.new(0, midX + w / 2, 0, midY - h / 2)
+                    RightSide.Position = UDim2.new(0, posX + w / 2, 0, posY - h / 2)
                     RightSide.Size = UDim2.new(0, t, 0, h / cLen)
                     RightSide.AnchorPoint = Vector2.new(1, 0)
                     
                     BottomRightSide.Visible = ESP.Drawing.Corner.Enabled
-                    BottomRightSide.Position = UDim2.new(0, midX + w / 2, 0, midY + h / 2)
+                    BottomRightSide.Position = UDim2.new(0, posX + w / 2, 0, posY + h / 2)
                     BottomRightSide.Size = UDim2.new(0, t, 0, h / cLen)
                     BottomRightSide.AnchorPoint = Vector2.new(1, 1)
                     
                     BottomRightDown.Visible = ESP.Drawing.Corner.Enabled
-                    BottomRightDown.Position = UDim2.new(0, midX + w / 2, 0, midY + h / 2)
+                    BottomRightDown.Position = UDim2.new(0, posX + w / 2, 0, posY + h / 2)
                     BottomRightDown.Size = UDim2.new(0, w / cLen, 0, t)
                     BottomRightDown.AnchorPoint = Vector2.new(1, 1)
 
-                    Box.Position = UDim2.new(0, midX - w / 2, 0, midY - h / 2)
+                    Box.Position = UDim2.new(0, posX - w / 2, 0, posY - h / 2)
                     Box.Size = UDim2.new(0, w, 0, h)
                     Box.Visible = ESP.Drawing.Box.Enabled
 
@@ -450,16 +470,16 @@ local ESPFunction = function(char)
 
                     local health = Humanoid.Health / Humanoid.MaxHealth
                     Healthbar.Visible = ESP.Drawing.Healthbar.Enabled
-                    Healthbar.Position = UDim2.new(0, midX - w / 2 - 6, 0, midY - h / 2 + h * (1 - health))  
+                    Healthbar.Position = UDim2.new(0, posX - w / 2 - 6, 0, posY - h / 2 + h * (1 - health))  
                     Healthbar.Size = UDim2.new(0, ESP.Drawing.Healthbar.Width, 0, h * health)  
                     
                     BehindHealthbar.Visible = ESP.Drawing.Healthbar.Enabled
-                    BehindHealthbar.Position = UDim2.new(0, midX - w / 2 - 6, 0, midY - h / 2)  
+                    BehindHealthbar.Position = UDim2.new(0, posX - w / 2 - 6, 0, posY - h / 2)  
                     BehindHealthbar.Size = UDim2.new(0, ESP.Drawing.Healthbar.Width, 0, h)
                     
                     if ESP.Drawing.Healthbar.HealthText then
                         local healthPercentage = math.floor(Humanoid.Health / Humanoid.MaxHealth * 100)
-                        HealthText.Position = UDim2.new(0, midX - w / 2 - 6, 0, midY - h / 2 + h * (1 - healthPercentage / 100) + 3)
+                        HealthText.Position = UDim2.new(0, posX - w / 2 - 6, 0, posY - h / 2 + h * (1 - healthPercentage / 100) + 3)
                         HealthText.Text = tostring(healthPercentage)
                         HealthText.Visible = Humanoid.Health < Humanoid.MaxHealth
                         if ESP.Drawing.Healthbar.Lerp then
@@ -482,7 +502,7 @@ end
 
 for _, child in pairs(npcContainer:GetChildren()) do
     if child:IsA("Model") and child:FindFirstChild("HumanoidRootPart") and child:FindFirstChild("Humanoid") then
-        if child.Name ~= lplayer.Name then
+        if child ~= lplayer.Character then
             coroutine.wrap(ESPFunction)(child)
         end
     end
@@ -490,7 +510,7 @@ end
 
 npcContainer.ChildAdded:Connect(function(child)
     if child:IsA("Model") and child:FindFirstChild("HumanoidRootPart") and child:FindFirstChild("Humanoid") then
-        if child.Name ~= lplayer.Name then
+        if child ~= lplayer.Character then
             coroutine.wrap(ESPFunction)(child)
         end
     end
