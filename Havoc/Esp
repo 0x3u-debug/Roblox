@@ -180,6 +180,7 @@ local function applyESP(char)
         Size = UDim2.new(0, 200, 0, 200),
         AlwaysOnTop = true,
         ResetOnSpawn = false,
+        ClipsDescendants = false,
     })
 
     local MainFrame = Functions:Create("Frame", {
@@ -194,14 +195,14 @@ local function applyESP(char)
     local StateLabel = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 200, 0, 100), AnchorPoint = Vector2.new(0, 0), BackgroundTransparency = 1, Text = "", Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true})
     
     local Box = Functions:Create("Frame", {Parent = MainFrame, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0})
-    local FillGradient = Functions:Create("UIGradient", {Parent = Box, Enabled = ESP.Drawing.Filled.Gradient, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Filled.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Filled.GradientRGB2)}})
-    local OutlineStroke = Functions:Create("UIStroke", {Parent = Box, Enabled = true, Transparency = ESP.Drawing.Box.Transparency, Color = ESP.Drawing.Box.Color, Thickness = ESP.Drawing.Box.Thickness, LineJoinMode = Enum.LineJoinMode.Miter})
-    local OutlineGradient = Functions:Create("UIGradient", {Parent = OutlineStroke, Enabled = ESP.Drawing.Box.Gradient, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Box.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Box.GradientRGB2)}})
+    local FillGradient = Functions:Create("UIGradient", {Parent = Box})
+    local OutlineStroke = Functions:Create("UIStroke", {Parent = Box, LineJoinMode = Enum.LineJoinMode.Miter})
+    local OutlineGradient = Functions:Create("UIGradient", {Parent = OutlineStroke})
     
     local BehindHealthbar = Functions:Create("Frame", {Parent = MainFrame, ZIndex = -1, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0, BorderSizePixel = 0})
     local HealthContainer = Functions:Create("Frame", {Parent = MainFrame, BackgroundTransparency = 1, ClipsDescendants = true, BorderSizePixel = 0})
     local Healthbar = Functions:Create("Frame", {Parent = HealthContainer, BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0, BorderSizePixel = 0})
-    local HealthbarGradient = Functions:Create("UIGradient", {Parent = Healthbar, Enabled = ESP.Drawing.Healthbar.Gradient, Rotation = -90, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Healthbar.GradientRGB1), ColorSequenceKeypoint.new(0.5, ESP.Drawing.Healthbar.GradientRGB2), ColorSequenceKeypoint.new(1, ESP.Drawing.Healthbar.GradientRGB3)}})
+    local HealthbarGradient = Functions:Create("UIGradient", {Parent = Healthbar, Rotation = -90})
     local HealthText = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0)})
     local Chams = Functions:Create("Highlight", {Parent = MainFrame, FillTransparency = 1, OutlineTransparency = 0, OutlineColor = Color3.fromRGB(119, 120, 255), DepthMode = "AlwaysOnTop"})
 
@@ -307,14 +308,34 @@ RunService.RenderStepped:Connect(function()
                 data.MainFrame.Visible = true
                 data.BBG.Adornee = HRP
 
+                -- Fixed scaling formula to prevent sizing from collapsing completely at distance/during ADS
                 local factor = 1 / (Pos.Z * fovRad)
-                local h = math.clamp(factor * 6000, 20, 1200)
+                local h = math.clamp(factor * 6000, 45, 1200) -- Increased minimum floor to 45 so elements don't overlap
                 local w = h / 1.4
 
                 data.BBG.Size = UDim2.new(0, w * 2, 0, h * 2)
 
                 local midX = w
                 local midY = h
+
+                -- Dynamic Color updates every frame
+                data.Name.TextSize = ESP.FontSize
+                data.Weapon.TextSize = ESP.FontSize
+                data.Distance.TextSize = ESP.FontSize
+                data.StateLabel.TextSize = ESP.FontSize
+
+                data.FillGradient.Enabled = ESP.Drawing.Filled.Gradient
+                data.FillGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Filled.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Filled.GradientRGB2)}
+                
+                data.OutlineStroke.Enabled = ESP.Drawing.Box.Enabled
+                data.OutlineStroke.Color = ESP.Drawing.Box.Color
+                data.OutlineStroke.Transparency = ESP.Drawing.Box.Transparency
+                data.OutlineStroke.Thickness = ESP.Drawing.Box.Thickness
+
+                data.OutlineGradient.Enabled = ESP.Drawing.Box.Gradient
+                data.OutlineGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Box.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Box.GradientRGB2)}
+
+                data.HealthbarGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Healthbar.GradientRGB1), ColorSequenceKeypoint.new(0.5, ESP.Drawing.Healthbar.GradientRGB2), ColorSequenceKeypoint.new(1, ESP.Drawing.Healthbar.GradientRGB3)}
 
                 if ESP.FadeOut.OnDistance then
                     Functions:FadeOutOnDist(data.Box, Dist)
@@ -481,11 +502,6 @@ RunService.RenderStepped:Connect(function()
                 else
                     data.Box.BackgroundTransparency = 1
                 end
-
-                data.OutlineStroke.Enabled = ESP.Drawing.Box.Enabled
-                data.OutlineStroke.Color = ESP.Drawing.Box.Color
-                data.OutlineStroke.Transparency = ESP.Drawing.Box.Transparency
-                data.OutlineStroke.Thickness = ESP.Drawing.Box.Thickness
 
                 if ESP.Drawing.Box.Animate or ESP.Drawing.Filled.Animate then
                     RotationAngle = RotationAngle + (tick() - Tick) * ESP.Drawing.Box.RotationSpeed * math.cos(math.pi / 4 * tick() - math.pi / 2)
