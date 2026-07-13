@@ -143,18 +143,18 @@ do
     end
 
     function Functions:FadeOutOnDist(element, distance)
-        local transparency = math.max(0.1, 1 - (distance / ESP.MaxDistance))
+        local alpha = math.clamp(1 - (distance / ESP.MaxDistance), 0.3, 1)
         if element:IsA("TextLabel") then
-            element.TextTransparency = 1 - transparency
+            element.TextTransparency = 1 - alpha
         elseif element:IsA("ImageLabel") then
-            element.ImageTransparency = 1 - transparency
+            element.ImageTransparency = 1 - alpha
         elseif element:IsA("UIStroke") then
-            element.Transparency = 1 - transparency
+            element.Transparency = 1 - alpha
         elseif element:IsA("Frame") then
-            element.BackgroundTransparency = 1 - transparency
+            element.BackgroundTransparency = 1 - alpha
         elseif element:IsA("Highlight") then
-            element.FillTransparency = 1 - transparency
-            element.OutlineTransparency = 1 - transparency
+            element.FillTransparency = 1 - alpha
+            element.OutlineTransparency = 1 - alpha
         end
     end
 end
@@ -240,7 +240,7 @@ local ESPFunction = function(char)
                 MainFrame.Visible = true
 
                 local factor = 1 / (Pos.Z * math.tan(math.rad(Cam.FieldOfView / 2)) * 2)
-                local h = math.clamp(factor * 1000 * 6.5, 10, 2000)
+                local h = math.clamp(factor * 1000 * 6.5, 40, 2000)
                 local w = h / 1.75
 
                 BBG.Size = UDim2.new(0, w * 2, 0, h * 2)
