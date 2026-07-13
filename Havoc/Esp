@@ -77,6 +77,11 @@ local ESP = {
             Animate = false,
             RotationSpeed = 300,
         },
+        States = {
+            Enabled = false,
+            Color = Color3.fromRGB(255, 0, 0),
+            Transparency = 0,
+        },
     };
     Connections = {
         RunService = RunService;
@@ -188,7 +193,7 @@ local ESPFunction = function(char)
     local BottomRightDown = Functions:Create("Frame", {Parent = container, BackgroundColor3 = ESP.Drawing.Corner.Color, BackgroundTransparency = ESP.Drawing.Corner.Transparency, Position = UDim2.new(0, 0, 0, 0)})
     local Flag1 = Functions:Create("TextLabel", {Parent = container, Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0)})
     local Flag2 = Functions:Create("TextLabel", {Parent = container, Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0)})
-    local StateLabel = Functions:Create("TextLabel", {Parent = container, Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0, 0), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 0, 0), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true, TextXAlignment = Enum.TextXAlignment.Right})
+    local StateLabel = Functions:Create("TextLabel", {Parent = container, Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0, 0), BackgroundTransparency = 1, TextColor3 = ESP.Drawing.States.Color, Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true, TextXAlignment = Enum.TextXAlignment.Right, TextTransparency = ESP.Drawing.States.Transparency})
 
     local Updater = function()
         local Connection;
@@ -288,27 +293,33 @@ local ESPFunction = function(char)
                 end
 
                 if show then
-                    local states = {}
-                    if char:GetAttribute("aim") then table.insert(states, "Aiming") end
-                    if char:GetAttribute("crouch") then table.insert(states, "Crouching") end
-                    if char:GetAttribute("prone") then table.insert(states, "Proning") end
+                    if ESP.Drawing.States.Enabled then
+                        local states = {}
+                        if char:GetAttribute("aim") then table.insert(states, "Aiming") end
+                        if char:GetAttribute("crouch") then table.insert(states, "Crouching") end
+                        if char:GetAttribute("prone") then table.insert(states, "Proning") end
 
-                    local velocity = HRP.Velocity
-                    local speed = velocity and velocity.Magnitude or 0
-                    local moveDirection = Humanoid.MoveDirection.Magnitude
-                    if speed > 16 then
-                        table.insert(states, "Sprinting")
-                    elseif moveDirection > 0.1 then
-                        table.insert(states, "Moving")
-                    else
-                        table.insert(states, "Idle")
-                    end
+                        local velocity = HRP.Velocity
+                        local speed = velocity and velocity.Magnitude or 0
+                        local moveDirection = Humanoid.MoveDirection.Magnitude
+                        if speed > 16 then
+                            table.insert(states, "Sprinting")
+                        elseif moveDirection > 0.1 then
+                            table.insert(states, "Moving")
+                        else
+                            table.insert(states, "Idle")
+                        end
 
-                    if #states > 0 then
-                        StateLabel.Text = "(" .. table.concat(states, "), (") .. ")"
-                        StateLabel.Visible = true
-                        StateLabel.Position = UDim2.new(0, Pos.X + w/2 + 4, 0, Pos.Y - h/2 - 4)
-                        StateLabel.AnchorPoint = Vector2.new(0, 1)
+                        if #states > 0 then
+                            StateLabel.Text = "(" .. table.concat(states, "), (") .. ")"
+                            StateLabel.TextColor3 = ESP.Drawing.States.Color
+                            StateLabel.TextTransparency = ESP.Drawing.States.Transparency
+                            StateLabel.Visible = true
+                            StateLabel.Position = UDim2.new(0, Pos.X + w/2 + 4, 0, Pos.Y - h/2 - 4)
+                            StateLabel.AnchorPoint = Vector2.new(0, 1)
+                        else
+                            StateLabel.Visible = false
+                        end
                     else
                         StateLabel.Visible = false
                     end
