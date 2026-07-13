@@ -184,12 +184,18 @@ local ESPFunction = function(char)
     local Weapon = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(119, 120, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
     local Distance = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
     local StateLabel = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "", Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true, TextXAlignment = Enum.TextXAlignment.Center})
+    
     local Box = Functions:Create("Frame", {Parent = MainFrame, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0})
     local FillGradient = Functions:Create("UIGradient", {Parent = Box, Enabled = ESP.Drawing.Filled.Gradient, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Filled.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Filled.GradientRGB2)}})
     local OutlineStroke = Functions:Create("UIStroke", {Parent = Box, Enabled = true, Transparency = ESP.Drawing.Box.Transparency, Color = ESP.Drawing.Box.Color, Thickness = ESP.Drawing.Box.Thickness, LineJoinMode = Enum.LineJoinMode.Miter})
     local OutlineGradient = Functions:Create("UIGradient", {Parent = OutlineStroke, Enabled = ESP.Drawing.Box.Gradient, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Box.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Box.GradientRGB2)}})
+    
     local Healthbar = Functions:Create("Frame", {Parent = MainFrame, BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0, BorderSizePixel = 0})
     local BehindHealthbar = Functions:Create("Frame", {Parent = MainFrame, ZIndex = -1, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0, BorderSizePixel = 0})
+    
+    -- New Healthbar Outline Stroke
+    local HealthbarOutline = Functions:Create("UIStroke", {Parent = BehindHealthbar, Enabled = true, Color = Color3.fromRGB(0, 0, 0), Thickness = 1, LineJoinMode = Enum.LineJoinMode.Miter})
+    
     local HealthbarGradient = Functions:Create("UIGradient", {Parent = Healthbar, Enabled = ESP.Drawing.Healthbar.Gradient, Rotation = -90, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Healthbar.GradientRGB1), ColorSequenceKeypoint.new(0.5, ESP.Drawing.Healthbar.GradientRGB2), ColorSequenceKeypoint.new(1, ESP.Drawing.Healthbar.GradientRGB3)}})
     local HealthText = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0)})
     local Chams = Functions:Create("Highlight", {Parent = MainFrame, FillTransparency = 1, OutlineTransparency = 0, OutlineColor = Color3.fromRGB(119, 120, 255), DepthMode = "AlwaysOnTop"})
@@ -249,6 +255,7 @@ local ESPFunction = function(char)
                     Functions:FadeOutOnDist(Weapon, Dist)
                     Functions:FadeOutOnDist(Healthbar, Dist)
                     Functions:FadeOutOnDist(BehindHealthbar, Dist)
+                    Functions:FadeOutOnDist(HealthbarOutline, Dist) -- Fade health outline too
                     Functions:FadeOutOnDist(HealthText, Dist)
                     Functions:FadeOutOnDist(LeftTop, Dist)
                     Functions:FadeOutOnDist(LeftSide, Dist)
@@ -321,18 +328,21 @@ local ESPFunction = function(char)
                         end
                     end
 
+                    -- Apply Name settings
                     Name.Visible = ESP.Drawing.Names.Enabled
                     Name.TextColor3 = ESP.Drawing.Names.RGB
                     local suffix = isNPC and " [Npc]" or " [Player]"
                     Name.Text = char.Name .. suffix
                     Name.Position = UDim2.new(0, midX, 0, midY - h/2 - 12)
 
+                    -- Apply Weapon settings
                     Weapon.Visible = ESP.Drawing.Weapons.Enabled
                     Weapon.TextColor3 = ESP.Drawing.Weapons.WeaponTextRGB
                     local tool = char:FindFirstChildOfClass("Tool")
                     Weapon.Text = tool and cleanWeaponName(tool.Name) or "none"
                     Weapon.Position = UDim2.new(0, midX, 0, midY + h/2 + 8)
 
+                    -- Apply Distance settings
                     local distanceVisible = ESP.Drawing.Distances.Enabled and ESP.Drawing.Distances.Position == "Bottom"
                     local bottomYOffset = 0
                     if ESP.Drawing.Weapons.Enabled then
@@ -351,6 +361,7 @@ local ESPFunction = function(char)
                         Distance.Visible = false
                     end
 
+                    -- Apply State settings
                     if ESP.Drawing.States.Enabled and #states > 0 then
                         local formattedStates = {}
                         for _, stateName in ipairs(states) do
@@ -365,6 +376,7 @@ local ESPFunction = function(char)
                         StateLabel.Visible = false
                     end
 
+                    -- Chams
                     Chams.Adornee = char
                     Chams.Enabled = ESP.Drawing.Chams.Enabled
                     Chams.FillColor = ESP.Drawing.Chams.FillRGB
@@ -383,6 +395,7 @@ local ESPFunction = function(char)
                         Chams.DepthMode = "AlwaysOnTop"
                     end
 
+                    -- Corner
                     local cLen = ESP.Drawing.Corner.Length
                     local t = ESP.Drawing.Corner.Thickness
                     local cornerColor = ESP.Drawing.Corner.Color
@@ -442,6 +455,7 @@ local ESPFunction = function(char)
                     BottomRightDown.Size = UDim2.new(0, w / cLen, 0, t)
                     BottomRightDown.AnchorPoint = Vector2.new(1, 1)
 
+                    -- Box
                     Box.Position = UDim2.new(0, midX - w / 2, 0, midY - h / 2)
                     Box.Size = UDim2.new(0, w, 0, h)
                     Box.Visible = ESP.Drawing.Box.Enabled
@@ -452,12 +466,28 @@ local ESPFunction = function(char)
                     else
                         Box.BackgroundTransparency = 1
                     end
+                    
+                    -- Dynamic Gradients Update Fix
+                    FillGradient.Enabled = ESP.Drawing.Filled.Gradient
+                    FillGradient.Color = ColorSequence.new{
+                        ColorSequenceKeypoint.new(0, ESP.Drawing.Filled.GradientRGB1), 
+                        ColorSequenceKeypoint.new(1, ESP.Drawing.Filled.GradientRGB2)
+                    }
 
+                    -- Outline
                     OutlineStroke.Enabled = ESP.Drawing.Box.Enabled
                     OutlineStroke.Color = ESP.Drawing.Box.Color
                     OutlineStroke.Transparency = ESP.Drawing.Box.Transparency
                     OutlineStroke.Thickness = ESP.Drawing.Box.Thickness
+                    
+                    -- Dynamic Outline Gradient Update Fix
+                    OutlineGradient.Enabled = ESP.Drawing.Box.Gradient
+                    OutlineGradient.Color = ColorSequence.new{
+                        ColorSequenceKeypoint.new(0, ESP.Drawing.Box.GradientRGB1), 
+                        ColorSequenceKeypoint.new(1, ESP.Drawing.Box.GradientRGB2)
+                    }
 
+                    -- Gradients / Animation
                     if ESP.Drawing.Box.Animate then
                         RotationAngle = RotationAngle + (tick() - Tick) * ESP.Drawing.Box.RotationSpeed * math.cos(math.pi / 4 * tick() - math.pi / 2)
                         OutlineGradient.Rotation = RotationAngle
@@ -471,6 +501,7 @@ local ESPFunction = function(char)
                     end
                     Tick = tick()
 
+                    -- Healthbar
                     local health = Humanoid.Health / Humanoid.MaxHealth
                     Healthbar.Visible = ESP.Drawing.Healthbar.Enabled
                     Healthbar.Position = UDim2.new(0, midX - w / 2 - 6, 0, midY - h / 2 + h * (1 - health))  
@@ -480,6 +511,7 @@ local ESPFunction = function(char)
                     BehindHealthbar.Position = UDim2.new(0, midX - w / 2 - 6, 0, midY - h / 2)  
                     BehindHealthbar.Size = UDim2.new(0, ESP.Drawing.Healthbar.Width, 0, h)
 
+                    -- Healthbar gradient colors
                     HealthbarGradient.Enabled = ESP.Drawing.Healthbar.Gradient
                     HealthbarGradient.Color = ColorSequence.new{
                         ColorSequenceKeypoint.new(0, ESP.Drawing.Healthbar.GradientRGB1),
