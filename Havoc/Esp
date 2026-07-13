@@ -21,9 +21,9 @@ local ESP = {
     },
     Layout = {
         NamePosition = "Top",
-        WeaponPosition = "Bottom",
-        DistancePosition = "Bottom",
-        StatePosition = "Bottom",
+        WeaponPosition = "Right",
+        DistancePosition = "Right",
+        StatePosition = "Right",
         HealthbarSide = "Left",
     },
     Drawing = {
@@ -45,7 +45,6 @@ local ESP = {
         },
         Distances = {
             Enabled = false,
-            Position = "Bottom",
             RGB = Color3.fromRGB(255, 255, 255),
         },
         Weapons = {
@@ -57,14 +56,14 @@ local ESP = {
         Healthbar = {
             Enabled = false,
             HealthText = false, Lerp = false, HealthTextRGB = Color3.fromRGB(119, 120, 255),
-            Width = 2.5,
+            Width = 3,
             Gradient = false, GradientRGB1 = Color3.fromRGB(200, 0, 0), GradientRGB2 = Color3.fromRGB(60, 60, 125), GradientRGB3 = Color3.fromRGB(119, 120, 255),
         },
         Box = {
             Enabled = false,
             Color = Color3.fromRGB(255, 255, 255),
             Transparency = 0,
-            Thickness = 1,
+            Thickness = 1.5,
             Animate = false,
             RotationSpeed = 300,
             Gradient = false,
@@ -75,8 +74,8 @@ local ESP = {
             Enabled = false,
             Color = Color3.fromRGB(255, 255, 255),
             Transparency = 0,
-            Length = 5,
-            Thickness = 1.5,
+            Length = 4,
+            Thickness = 2,
         },
         Filled = {
             Enabled = false,
@@ -190,9 +189,9 @@ local function applyESP(char)
     })
 
     local Name = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 200, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
-    local Weapon = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 200, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(119, 120, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
-    local Distance = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 200, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
-    local StateLabel = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 200, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Text = "", Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true, TextXAlignment = Enum.TextXAlignment.Center})
+    local Weapon = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 200, 0, 20), AnchorPoint = Vector2.new(0, 0.5), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(119, 120, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true, TextXAlignment = Enum.TextXAlignment.Left})
+    local Distance = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 200, 0, 20), AnchorPoint = Vector2.new(0, 0.5), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true, TextXAlignment = Enum.TextXAlignment.Left})
+    local StateLabel = Functions:Create("TextLabel", {Parent = MainFrame, Size = UDim2.new(0, 200, 0, 20), AnchorPoint = Vector2.new(0, 0.5), BackgroundTransparency = 1, Text = "", Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true, TextXAlignment = Enum.TextXAlignment.Left})
     
     local Box = Functions:Create("Frame", {Parent = MainFrame, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0})
     local FillGradient = Functions:Create("UIGradient", {Parent = Box, Enabled = ESP.Drawing.Filled.Gradient, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Filled.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Filled.GradientRGB2)}})
@@ -307,8 +306,8 @@ RunService.RenderStepped:Connect(function()
                 data.BBG.Adornee = HRP
 
                 local factor = 1 / (Pos.Z * fovRad)
-                local h = math.clamp(factor * 3500, 10, 800)
-                local w = h / 2
+                local h = math.clamp(factor * 6000, 20, 1200)
+                local w = h / 1.4
 
                 data.BBG.Size = UDim2.new(0, w * 2, 0, h * 2)
 
@@ -370,20 +369,15 @@ RunService.RenderStepped:Connect(function()
                 end
 
                 local topOffset = 0
-                local bottomOffset = 0
+                local rightOffset = 0
                 local suffix = data.IsNPC and " [Npc]" or " [Player]"
 
                 if ESP.Drawing.Names.Enabled then
                     data.Name.Visible = true
                     data.Name.TextColor3 = overrideNameColor or ESP.Drawing.Names.RGB
                     data.Name.Text = char.Name .. suffix
-                    if ESP.Layout.NamePosition == "Top" then
-                        data.Name.Position = UDim2.new(0, midX, 0, midY - h / 2 - 12 - topOffset)
-                        topOffset = topOffset + 14
-                    else
-                        data.Name.Position = UDim2.new(0, midX, 0, midY + h / 2 + 8 + bottomOffset)
-                        bottomOffset = bottomOffset + 14
-                    end
+                    data.Name.Position = UDim2.new(0, midX, 0, midY - h / 2 - 12 - topOffset)
+                    topOffset = topOffset + 14
                 else
                     data.Name.Visible = false
                 end
@@ -393,13 +387,8 @@ RunService.RenderStepped:Connect(function()
                     data.Weapon.TextColor3 = ESP.Drawing.Weapons.WeaponTextRGB
                     local tool = char:FindFirstChildOfClass("Tool")
                     data.Weapon.Text = tool and cleanWeaponName(tool.Name) or "none"
-                    if ESP.Layout.WeaponPosition == "Top" then
-                        data.Weapon.Position = UDim2.new(0, midX, 0, midY - h / 2 - 12 - topOffset)
-                        topOffset = topOffset + 14
-                    else
-                        data.Weapon.Position = UDim2.new(0, midX, 0, midY + h / 2 + 8 + bottomOffset)
-                        bottomOffset = bottomOffset + 14
-                    end
+                    data.Weapon.Position = UDim2.new(0, midX + w / 2 + 8, 0, midY - h / 2 + 6 + rightOffset)
+                    rightOffset = rightOffset + 14
                 else
                     data.Weapon.Visible = false
                 end
@@ -408,13 +397,8 @@ RunService.RenderStepped:Connect(function()
                     data.Distance.Visible = true
                     data.Distance.TextColor3 = ESP.Drawing.Distances.RGB
                     data.Distance.Text = string.format("%dm", math.floor(Dist))
-                    if ESP.Layout.DistancePosition == "Top" then
-                        data.Distance.Position = UDim2.new(0, midX, 0, midY - h / 2 - 12 - topOffset)
-                        topOffset = topOffset + 14
-                    else
-                        data.Distance.Position = UDim2.new(0, midX, 0, midY + h / 2 + 8 + bottomOffset)
-                        bottomOffset = bottomOffset + 14
-                    end
+                    data.Distance.Position = UDim2.new(0, midX + w / 2 + 8, 0, midY - h / 2 + 6 + rightOffset)
+                    rightOffset = rightOffset + 14
                 else
                     data.Distance.Visible = false
                 end
@@ -429,13 +413,8 @@ RunService.RenderStepped:Connect(function()
                     end
                     data.StateLabel.Text = table.concat(formattedStates, " ")
                     data.StateLabel.Visible = true
-                    if ESP.Layout.StatePosition == "Top" then
-                        data.StateLabel.Position = UDim2.new(0, midX, 0, midY - h / 2 - 12 - topOffset)
-                        topOffset = topOffset + 14
-                    else
-                        data.StateLabel.Position = UDim2.new(0, midX, 0, midY + h / 2 + 8 + bottomOffset)
-                        bottomOffset = bottomOffset + 14
-                    end
+                    data.StateLabel.Position = UDim2.new(0, midX + w / 2 + 8, 0, midY - h / 2 + 6 + rightOffset)
+                    rightOffset = rightOffset + 14
                 else
                     data.StateLabel.Visible = false
                 end
