@@ -308,17 +308,15 @@ RunService.RenderStepped:Connect(function()
                 data.MainFrame.Visible = true
                 data.BBG.Adornee = HRP
 
-                -- Fixed scaling formula to prevent sizing from collapsing completely at distance/during ADS
                 local factor = 1 / (Pos.Z * fovRad)
-                local h = math.clamp(factor * 6000, 45, 1200) -- Increased minimum floor to 45 so elements don't overlap
-                local w = h / 1.4
+                local h = math.clamp(factor * 4200, 35, 1000) 
+                local w = h / 1.7
 
                 data.BBG.Size = UDim2.new(0, w * 2, 0, h * 2)
 
                 local midX = w
                 local midY = h
 
-                -- Dynamic Color updates every frame
                 data.Name.TextSize = ESP.FontSize
                 data.Weapon.TextSize = ESP.FontSize
                 data.Distance.TextSize = ESP.FontSize
@@ -354,31 +352,24 @@ RunService.RenderStepped:Connect(function()
                 end
 
                 local states = {}
+                
                 if data.IsNPC then
                     if char:GetAttribute("aim") then table.insert(states, "Aiming") end
                     if char:GetAttribute("isCrouch") then table.insert(states, "Crouching") end
                     if char:GetAttribute("isProne") then table.insert(states, "Proning") end
-                    if char:GetAttribute("reload") then table.insert(states, "Reloading") end
                     if char:GetAttribute("run") then table.insert(states, "Sprinting") end
-                    if char:GetAttribute("onFight") then table.insert(states, "Angry") end
+                    if char:GetAttribute("onFight") or char:GetAttribute("aggro") then table.insert(states, "Angry") end
                 else
                     if char:GetAttribute("aim") then table.insert(states, "Aiming") end
                     if char:GetAttribute("crouch") then table.insert(states, "Crouching") end
+                    if char:GetAttribute("move") then table.insert(states, "Walking") end
                     if char:GetAttribute("prone") then table.insert(states, "Proning") end
+                    if char:GetAttribute("sprint") then table.insert(states, "Sprinting") end
+                end
 
-                    local stateType = Humanoid:GetState()
-                    if stateType == Enum.HumanoidStateType.Jumping or stateType == Enum.HumanoidStateType.Freefall then
-                        table.insert(states, "Jumping")
-                    end
-
-                    local velocity = HRP.AssemblyLinearVelocity
-                    local speed = velocity and velocity.Magnitude or 0
-                    local moveDirection = Humanoid.MoveDirection.Magnitude
-                    if speed > 16 then
-                        table.insert(states, "Sprinting")
-                    elseif moveDirection > 0.1 then
-                        table.insert(states, "Walking")
-                    end
+                local stateType = Humanoid:GetState()
+                if stateType == Enum.HumanoidStateType.Jumping or stateType == Enum.HumanoidStateType.Freefall then
+                    table.insert(states, "Jumping")
                 end
 
                 if char:GetAttribute("peeking") then
@@ -394,7 +385,14 @@ RunService.RenderStepped:Connect(function()
                 end
 
                 local topOffset = 0
-                local suffix = data.IsNPC and " [Npc]" or " [Player]"
+                local suffix = " [Player]"
+                if data.IsNPC then
+                    if char:GetAttribute("Boss") then
+                        suffix = " [Boss]"
+                    else
+                        suffix = " [Npc]"
+                    end
+                end
 
                 if ESP.Drawing.Names.Enabled then
                     data.Name.Visible = true
