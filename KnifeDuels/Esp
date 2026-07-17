@@ -44,6 +44,10 @@ local ESP = {
             Position = "Text",
             RGB = Color3.fromRGB(255, 255, 255),
         },
+        Streak = {
+            Enabled = true,
+            RGB = Color3.fromRGB(255, 255, 255),
+        },
         Box = {
             Enabled = false,
             Color = Color3.fromRGB(255, 255, 255),
@@ -284,7 +288,7 @@ local ApplyESP = function(plr)
                     BottomRightDown.BackgroundColor3 = ESP.Drawing.Corner.Color
                     BottomRightDown.Position = UDim2.new(0, Pos.X + w / 2, 0, Pos.Y + h / 2)
                     BottomRightDown.Size = UDim2.new(0, w / 5, 0, 1)
-                    BottomRightDown.AnchorPoint = Vector2.new(1, 1)                                                                            
+                    BottomRightDown.AnchorPoint = Vector2.new(1, 1)                                                                                  
 
                     BoxBackground.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y - h / 2)
                     BoxBackground.Size = UDim2.new(0, w, 0, h)
@@ -375,8 +379,9 @@ local ApplyESP = function(plr)
                         end
                     end
                     
-                    Streak.Text = string.format('<font color="rgb(255, 255, 255)">Streak: %d</font>', streakVal)
-                    Streak.Visible = true
+                    Streak.Text = string.format('Streak: %d', streakVal)
+                    Streak.TextColor3 = ESP.Drawing.Streak.RGB
+                    Streak.Visible = ESP.Drawing.Streak.Enabled
                 else
                     HideESP()
                 end
