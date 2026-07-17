@@ -1,0 +1,30 @@
+local Games = {
+    [10090256806] = "https://raw.githubusercontent.com/0x3u/Scripts/refs/heads/main/TTK_Testing",
+    [8307114974] = "https://raw.githubusercontent.com/0x3u/Scripts/refs/heads/main/Operation%20One/Code",
+    [9461038514] = "https://raw.githubusercontent.com/0x3u/Scripts/refs/heads/main/Duels/Code",
+    [9641502068] = "https://raw.githubusercontent.com/0x3u-debug/Roblox/refs/heads/main/KnifeDuels/Code"
+}
+
+local url = Games[game.GameId]
+
+if not url then
+    warn("Game not supported. GameId: " .. tostring(game.GameId))
+    return
+end
+
+local success, response = pcall(function()
+    return game:HttpGet(url)
+end)
+
+if not success then
+    warn("Failed to fetch script: " .. tostring(response))
+    return
+end
+
+local loaded, err = pcall(function()
+    loadstring(response)()
+end)
+
+if not loaded then
+    warn("Failed to execute script: " .. tostring(err))
+end
