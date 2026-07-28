@@ -1,404 +1,444 @@
-local Workspace = cloneref(game:GetService("Workspace"))
-local RunService = cloneref(game:GetService("RunService"))
 local Players = cloneref(game:GetService("Players"))
-local CoreGui = game:GetService("CoreGui")
-local Lighting = cloneref(game:GetService("Lighting"))
+local RunService = cloneref(game:GetService("RunService"))
+local Workspace = cloneref(game:GetService("Workspace"))
+local TweenService = cloneref(game:GetService("TweenService"))
+local HttpService = cloneref(game:GetService("HttpService"))
+local CoreGui = cloneref(game:GetService("CoreGui"))
 
-local ESP = {
-    Enabled = false,
-    TeamCheck = false,
-    MaxDistance = 200,
-    FontSize = 10,
-    FadeOut = {
-        OnDistance = false,
-        OnDeath = false,
-        OnLeave = false,
-    },
-    Options = { 
-        Teamcheck = false, 
-        TeamcheckRGB = Color3.fromRGB(0, 255, 0),
-        Friendcheck = false, 
-        FriendcheckRGB = Color3.fromRGB(0, 255, 0),
-        Highlight = false, 
-        HighlightRGB = Color3.fromRGB(255, 0, 0),
-    },
+local Camera = Workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local DEBUG_MODE = false
+
+if CoreGui:FindFirstChild("ESPBBoxRegistry") then CoreGui.ESPBBoxRegistry:Destroy() end
+if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("ESPBBoxRegistry") then LocalPlayer.PlayerGui.ESPBBoxRegistry:Destroy() end
+
+if not isfolder("ESPBBoxRegistry") then makefolder("ESPBBoxRegistry") end
+
+local FONT_PATH = "ESPBBoxRegistry/ProggyClean.ttf"
+local FONT_JSON_PATH = "ESPBBoxRegistry/ProggyClean.font"
+
+if not isfile(FONT_PATH) then writefile(FONT_PATH, game:HttpGet("https://github.com/sametexe001/luas/raw/refs/heads/main/fonts/ProggyClean.ttf")) end
+
+local proggyCleanConfig = { name = "ProggyClean", faces = { { name = "Regular", weight = 400, style = "normal", assetId = getcustomasset(FONT_PATH) } } }
+
+if not isfile(FONT_JSON_PATH) then writefile(FONT_JSON_PATH, HttpService:JSONEncode(proggyCleanConfig)) end
+
+local customFont = Font.new(getcustomasset(FONT_JSON_PATH), Enum.FontWeight.Regular)
+
+local ESPGui = Instance.new("ScreenGui")
+ESPGui.Name = "ESPBBoxRegistry"
+ESPGui.IgnoreGuiInset = true
+local success = pcall(function() ESPGui.Parent = CoreGui end)
+if not success then ESPGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+local function createElement(className, properties, parent) local instance = Instance.new(className); for prop, value in pairs(properties) do instance[prop] = value end; if parent then instance.Parent = parent end; return instance end
+
+local function createStroke(color, parent)
+    return Instance.new("UIStroke", parent, { Color = color, Thickness = 1, LineJoinMode = Enum.LineJoinMode.Miter })
+end
+
+local EspLibLink = {
     Drawing = {
-        Chams = {
-            Enabled  = false,
-            Thermal = false,
-            FillRGB = Color3.fromRGB(119, 120, 255),
-            Fill_Transparency = 100,
-            OutlineRGB = Color3.fromRGB(119, 120, 255),
-            Outline_Transparency = 100,
-            VisibleCheck = false,
-        },
-        Names = {
-            Enabled = false,
-            RGB = Color3.fromRGB(255, 255, 255),
-        },
-        Flags = {
-            Enabled = false,
-        },
-        Distances = {
-            Enabled = false, 
-            Position = "Text",
-            RGB = Color3.fromRGB(255, 255, 255),
-        },
-        Streak = {
-            Enabled = true,
-            RGB = Color3.fromRGB(255, 255, 255),
-        },
         Box = {
             Enabled = false,
-            Color = Color3.fromRGB(255, 255, 255),
-            Animate = false,
-            RotationSpeed = 300,
-            Gradient = false,
-            GradientRGB1 = Color3.fromRGB(119, 120, 255),
-            GradientRGB2 = Color3.fromRGB(0, 0, 0),
+            TeamCheck = false,
+            Gradient = {
+                Enabled = false,
+                Color1 = Color3.fromRGB(255, 0, 255),
+                Color2 = Color3.fromRGB(255, 255, 0),
+                Animated = false,
+                Speed = 1
+            },
+            Glow = {
+                Enabled = false,
+                Color = Color3.fromRGB(255, 255, 255),
+                Transparency = 0.9,
+                Thickness = 3,
+                Blur = 6
+            }
         },
-        Filled = {
-            Enabled = false,
-            Transparency = 0.75,
-            FillColor = Color3.fromRGB(0, 0, 0),
-            GradientFill = false,
-            GradientFillRGB1 = Color3.fromRGB(119, 120, 255),
-            GradientFillRGB2 = Color3.fromRGB(0, 0, 0),
-        },
-        Corner = {
-            Enabled = false,
-            Color = Color3.fromRGB(255, 255, 255),
-        },
-        Healthbar = {
-            Enabled = false,  
-            HealthText = false, 
-            Lerp = false, 
-            HealthTextRGB = Color3.fromRGB(119, 120, 255),
-            Width = 2.5,
-            Gradient = false, 
-            GradientRGB1 = Color3.fromRGB(200, 0, 0), 
-            GradientRGB2 = Color3.fromRGB(60, 60, 125), 
-            GradientRGB3 = Color3.fromRGB(119, 120, 255), 
+        Bars = {
+            HealthBar = {
+                Name = "HealthBar",
+                Enabled = false,
+                Side = "Left",
+                Thickness = 1,
+                Offset = 4,
+                ShowText = false,
+                HideWhenMax = false,
+                TextFormat = "Value",
+                Color = Color3.fromRGB(255, 255, 255),
+                Gradient = {
+                    Enabled = false,
+                    Animated = false,
+                    Speed = 1,
+                    Gradient1 = Color3.fromRGB(0, 255, 0),
+                    Gradient2 = Color3.fromRGB(255, 255, 0),
+                    Gradient3 = Color3.fromRGB(255, 0, 0)
+                },
+                Inverted = false,
+                Values = {
+                    Current = 100,
+                    Max = 100
+                }
+            }
         }
-    },
-    Connections = {
-        RunService = RunService;
-    },
-    Fonts = {},
+    }
 }
 
-local Euphoria = ESP.Connections
-local lplayer = Players.LocalPlayer
-local camera = game.Workspace.CurrentCamera
-local Cam = Workspace.CurrentCamera
-local RotationAngle = -45
-local Tick = tick()
+local playerBoxes = {}
+local partRegistry = {}
+local displayedValues = {}  
 
-local Functions = {}
-do
-    function Functions:Create(Class, Properties)
-        local _Instance = typeof(Class) == 'string' and Instance.new(Class) or Class
-        for Property, Value in pairs(Properties) do
-            _Instance[Property] = Value
+local VALID_PARTS = {
+    "Head", "Torso", "HumanoidRootPart", "Left Arm", "Right Arm", "Left Leg", "Right Leg",
+    "UpperTorso", "LowerTorso", "LeftUpperArm", "LeftLowerArm", "LeftHand",
+    "RightUpperArm", "RightLowerArm", "RightHand", "LeftUpperLeg", "LeftLowerLeg",
+    "LeftFoot", "RightUpperLeg", "RightLowerLeg", "RightFoot"
+}
+
+local function isValidPart(part)
+    if not part:IsA("BasePart") then return false end
+    for _, name in ipairs(VALID_PARTS) do if part.Name == name then return true end end
+    return false
+end
+
+local function cacheCharacterParts(player, character)
+    local parts = {}
+    for _, part in ipairs(character:GetDescendants()) do if isValidPart(part) then table.insert(parts, part) end end
+    partRegistry[player] = parts
+    character.DescendantAdded:Connect(function(part) if isValidPart(part) then table.insert(partRegistry[player], part) end end)
+end
+
+local function getHighestBarOffset(side)
+    local maxOffset = 0
+    if not EspLibLink.Drawing.Bars then return 0 end
+    for _, barConfig in pairs(EspLibLink.Drawing.Bars) do
+        if barConfig.Enabled and barConfig.Side == side then
+            local current = (barConfig.Offset or 0) + (barConfig.Thickness or 2)
+            if current > maxOffset then maxOffset = current end
         end
-        return _Instance
+    end
+    return maxOffset
+end
+
+local function buildSeamlessColorSequence(gradConfig)
+    local colors = {}
+    local i = 1
+    while gradConfig["Gradient" .. i] ~= nil do
+        table.insert(colors, gradConfig["Gradient" .. i])
+        i = i + 1
     end
     
-    function Functions:FadeOutOnDist(element, distance)
-        local transparency = math.max(0.1, 1 - (distance / ESP.MaxDistance))
-        if element:IsA("TextLabel") then
-            element.TextTransparency = 1 - transparency
-        elseif element:IsA("ImageLabel") then
-            element.ImageTransparency = 1 - transparency
-        elseif element:IsA("UIStroke") then
-            element.Transparency = 1 - transparency
-        elseif element:IsA("Frame") then
-            element.BackgroundTransparency = 1 - transparency
-        elseif element:IsA("Highlight") then
-            element.FillTransparency = 1 - transparency
-            element.OutlineTransparency = 1 - transparency
+    local count = #colors
+    if count == 0 then
+        return ColorSequence.new(Color3.fromRGB(255, 255, 255))
+    elseif count == 1 then
+        return ColorSequence.new(colors[1])
+    else
+        local keypoints = {}
+        for idx, col in ipairs(colors) do
+            local timeVal = (idx - 1) / (count - 1)
+            table.insert(keypoints, ColorSequenceKeypoint.new(timeVal, col))
         end
+        return ColorSequence.new(keypoints)
     end
 end
 
-local ScreenGui = Functions:Create("ScreenGui", {
-    Parent = CoreGui,
-    Name = "ESPHolder",
-})
-
-local DupeCheck = function(plr)
-    if ScreenGui:FindFirstChild(plr.Name) then
-        ScreenGui[plr.Name]:Destroy()
+local function evaluateCustomGradientColor(gradConfig, ratio)
+    local colors = {}
+    local i = 1
+    while gradConfig["Gradient" .. i] ~= nil do
+        table.insert(colors, gradConfig["Gradient" .. i])
+        i = i + 1
     end
+    
+    local count = #colors
+    if count == 0 then return Color3.fromRGB(255, 255, 255) end
+    if count == 1 then return colors[1] end
+    
+    local clampedRatio = math.clamp(ratio, 0, 1)
+    if clampedRatio == 1 then return colors[count] end
+    
+    local scaled = clampedRatio * (count - 1)
+    local index = math.floor(scaled) + 1
+    local alpha = scaled - (index - 1)
+    
+    local c1 = colors[index]
+    local c2 = colors[index + 1] or c1
+    return c1:Lerp(c2, alpha)
 end
 
-local ApplyESP = function(plr)
-    coroutine.wrap(DupeCheck)(plr)
-    local Name = Functions:Create("TextLabel", {Parent = ScreenGui, Position = UDim2.new(0.5, 0, 0, -11), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
-    local Distance = Functions:Create("TextLabel", {Parent = ScreenGui, Position = UDim2.new(0.5, 0, 0, 11), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
-    local Streak = Functions:Create("TextLabel", {Parent = ScreenGui, Position = UDim2.new(0.5, 0, 0, 31), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
+local function createBoxUI(player)
+    local container = createElement("Frame", { BackgroundTransparency = 1, Visible = false, Name = player.Name }, ESPGui)
     
-    local BoxBackground = Functions:Create("Frame", {Parent = ScreenGui, BackgroundColor3 = ESP.Drawing.Filled.FillColor, BackgroundTransparency = 1, BorderSizePixel = 0})
-    local Gradient1 = Functions:Create("UIGradient", {Parent = BoxBackground, Enabled = ESP.Drawing.Filled.GradientFill, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Filled.GradientFillRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Filled.GradientFillRGB2)}})
+    local glowImg = createElement("ImageLabel", { Parent = container, Name = "GlowImage", ImageColor3 = Color3.fromRGB(255, 255, 255), ScaleType = Enum.ScaleType.Slice, ImageTransparency = 0.9, BorderColor3 = Color3.fromRGB(0, 0, 0), BackgroundColor3 = Color3.fromRGB(255, 255, 255), Image = "http://www.roblox.com/asset/?id=18245826428", BackgroundTransparency = 1, Position = UDim2.new(0, -20, 0, -20), Size = UDim2.new(1, 40, 1, 40), ZIndex = 0, BorderSizePixel = 0, SliceCenter = Rect.new(Vector2.new(21, 21), Vector2.new(79, 79)), Visible = false })
+    local outerBlack = createElement("Frame", { Size = UDim2.new(1, 2, 1, 2), Position = UDim2.new(0, -1, 0, -1), BackgroundTransparency = 1, ZIndex = 1 }, container)
+    createStroke(Color3.fromRGB(0, 0, 0), outerBlack)
+    local mainWhite = createElement("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = 2 }, container)
+    local mainStroke = createStroke(Color3.fromRGB(255, 255, 255), mainWhite)
+    local innerBlack = createElement("Frame", { Size = UDim2.new(1, -2, 1, -2), Position = UDim2.new(0, 1, 0, 1), BackgroundTransparency = 1, ZIndex = 3 }, container)
+    createStroke(Color3.fromRGB(0, 0, 0), innerBlack)
     
-    local BoxOutlineFrame = Functions:Create("Frame", {Parent = ScreenGui, BackgroundTransparency = 1, BorderSizePixel = 0})
-    local Outline = Functions:Create("UIStroke", {Parent = BoxOutlineFrame, Enabled = false, Transparency = 0, Color = ESP.Drawing.Box.Color, LineJoinMode = Enum.LineJoinMode.Miter})
-    local Gradient2 = Functions:Create("UIGradient", {Parent = Outline, Enabled = ESP.Drawing.Box.Gradient, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Box.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Box.GradientRGB2)}})
+    createElement("TextLabel", { Name = "NameText", Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0, -3), AnchorPoint = Vector2.new(0.5, 1), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), FontFace = customFont, TextSize = 11, AutomaticSize = Enum.AutomaticSize.XY, Text = player.Name, ZIndex = 5 }, container)
+    createElement("TextLabel", { Name = "DistanceText", Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 1, 2), AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), FontFace = customFont, TextSize = 11, AutomaticSize = Enum.AutomaticSize.XY, Text = "0m", ZIndex = 5 }, container)
     
-    local Healthbar = Functions:Create("Frame", {Parent = ScreenGui, BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0})
-    local BehindHealthbar = Functions:Create("Frame", {Parent = ScreenGui, ZIndex = -1, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0})
-    local HealthbarGradient = Functions:Create("UIGradient", {Parent = Healthbar, Enabled = ESP.Drawing.Healthbar.Gradient, Rotation = -90, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Healthbar.GradientRGB1), ColorSequenceKeypoint.new(0.5, ESP.Drawing.Healthbar.GradientRGB2), ColorSequenceKeypoint.new(1, ESP.Drawing.Healthbar.GradientRGB3)}})
-    local HealthText = Functions:Create("TextLabel", {Parent = ScreenGui, Position = UDim2.new(0.5, 0, 0, 31), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0)})
-    local Chams = Functions:Create("Highlight", {Parent = ScreenGui, FillTransparency = 1, OutlineTransparency = 0, OutlineColor = Color3.fromRGB(119, 120, 255), DepthMode = "AlwaysOnTop"})
-    
-    local LeftTop = Functions:Create("Frame", {Parent = ScreenGui, BackgroundColor3 = ESP.Drawing.Corner.Color, Position = UDim2.new(0, 0, 0, 0), BorderSizePixel = 0})
-    local LeftSide = Functions:Create("Frame", {Parent = ScreenGui, BackgroundColor3 = ESP.Drawing.Corner.Color, Position = UDim2.new(0, 0, 0, 0), BorderSizePixel = 0})
-    local RightTop = Functions:Create("Frame", {Parent = ScreenGui, BackgroundColor3 = ESP.Drawing.Corner.Color, Position = UDim2.new(0, 0, 0, 0), BorderSizePixel = 0})
-    local RightSide = Functions:Create("Frame", {Parent = ScreenGui, BackgroundColor3 = ESP.Drawing.Corner.Color, Position = UDim2.new(0, 0, 0, 0), BorderSizePixel = 0})
-    local BottomSide = Functions:Create("Frame", {Parent = ScreenGui, BackgroundColor3 = ESP.Drawing.Corner.Color, Position = UDim2.new(0, 0, 0, 0), BorderSizePixel = 0})
-    local BottomDown = Functions:Create("Frame", {Parent = ScreenGui, BackgroundColor3 = ESP.Drawing.Corner.Color, Position = UDim2.new(0, 0, 0, 0), BorderSizePixel = 0})
-    local BottomRightSide = Functions:Create("Frame", {Parent = ScreenGui, BackgroundColor3 = ESP.Drawing.Corner.Color, Position = UDim2.new(0, 0, 0, 0), BorderSizePixel = 0})
-    local BottomRightDown = Functions:Create("Frame", {Parent = ScreenGui, BackgroundColor3 = ESP.Drawing.Corner.Color, Position = UDim2.new(0, 0, 0, 0), BorderSizePixel = 0})
-    
-    local Flag1 = Functions:Create("TextLabel", {Parent = ScreenGui, Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0)})
-    local Flag2 = Functions:Create("TextLabel", {Parent = ScreenGui, Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0)})
+    local barsFolder = createElement("Folder", { Name = "BarsFolder" }, container)
+    for _, barConfig in pairs(EspLibLink.Drawing.Bars or {}) do
+        local bar = createElement("Frame", { Name = barConfig.Name, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 1, BorderColor3 = Color3.fromRGB(0, 0, 0), ZIndex = 2, ClipsDescendants = true }, barsFolder)
+        bar:SetAttribute("LastValue", -1)
+        
+        local fill = createElement("Frame", { Name = "Fill", Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = barConfig.Color or Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, ZIndex = 3 }, bar)
+        
+        local gradCfg = barConfig.Gradient
+        if type(gradCfg) == "table" and gradCfg.Enabled then
+            fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            createElement("UIGradient", { Name = "Grad", Rotation = 90, Color = buildSeamlessColorSequence(gradCfg), Offset = Vector2.new(0, 0) }, fill)
+        end
+        
+        createElement("TextLabel", { Name = "ValueText", Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), FontFace = customFont, TextSize = 12, AutomaticSize = Enum.AutomaticSize.XY, Text = "0", ZIndex = 5, Visible = false }, bar)
+    end
 
-    local Updater = function()
-        local Connection;
-        local function HideESP()
-            BoxBackground.Visible = false
-            BoxOutlineFrame.Visible = false
-            Name.Visible = false
-            Distance.Visible = false
-            Streak.Visible = false
-            Healthbar.Visible = false
-            BehindHealthbar.Visible = false
-            HealthText.Visible = false
-            LeftTop.Visible = false
-            LeftSide.Visible = false
-            BottomSide.Visible = false
-            BottomDown.Visible = false
-            RightTop.Visible = false
-            RightSide.Visible = false
-            BottomRightSide.Visible = false
-            BottomRightDown.Visible = false
-            Flag1.Visible = false
-            Chams.Enabled = false
-            Flag2.Visible = false
-            if not plr then
-                ScreenGui:Destroy()
-                Connection:Disconnect()
+    playerBoxes[player] = { Container = container, GlowImage = glowImg, MainStroke = mainStroke, BarsFolder = barsFolder }
+end
+
+local function setupPlayer(player)
+    if player == LocalPlayer and not DEBUG_MODE then return end
+    createBoxUI(player)
+    player.CharacterAdded:Connect(function(character) cacheCharacterParts(player, character) displayedValues[player] = nil end)
+    if player.Character then cacheCharacterParts(player, player.Character) end
+end
+
+local function removePlayer(player)
+    if playerBoxes[player] then playerBoxes[player].Container:Destroy(); playerBoxes[player] = nil end
+    partRegistry[player] = nil; displayedValues[player] = nil
+end
+
+for _, player in ipairs(Players:GetPlayers()) do setupPlayer(player) end
+Players.PlayerAdded:Connect(setupPlayer)
+Players.PlayerRemoving:Connect(removePlayer)
+
+local function getBoundingBox(parts)
+    local minX, minY, maxX, maxY = math.huge, math.huge, -math.huge, -math.huge
+    local anyOnScreen = false
+    for _, part in ipairs(parts) do
+        local cf, size = part.CFrame, part.Size
+        local corners = { (cf * CFrame.new(size.X/2, size.Y/2, size.Z/2)).Position, (cf * CFrame.new(-size.X/2, size.Y/2, size.Z/2)).Position, (cf * CFrame.new(size.X/2, -size.Y/2, size.Z/2)).Position, (cf * CFrame.new(-size.X/2, -size.Y/2, size.Z/2)).Position, (cf * CFrame.new(size.X/2, size.Y/2, -size.Z/2)).Position, (cf * CFrame.new(-size.X/2, size.Y/2, -size.Z/2)).Position, (cf * CFrame.new(size.X/2, -size.Y/2, -size.Z/2)).Position, (cf * CFrame.new(-size.X/2, -size.Y/2, -size.Z/2)).Position }
+        for _, corner in ipairs(corners) do
+            local screenPos, onScreen = Camera:WorldToViewportPoint(corner)
+            if onScreen then anyOnScreen = true end
+            if screenPos.Z > 0 then minX = math.min(minX, screenPos.X); minY = math.min(minY, screenPos.Y); maxX = math.max(maxX, screenPos.X); maxY = math.max(maxY, screenPos.Y) end
+        end
+    end
+    if anyOnScreen and minX ~= math.huge then return true, Vector2.new(minX, minY), Vector2.new(maxX - minX, maxY - minY) end
+    return false, nil, nil
+end
+
+local gradientAnimTime = 0
+
+local function createSmoothGradient(color1, color2)
+    return ColorSequence.new({ ColorSequenceKeypoint.new(0, color1), ColorSequenceKeypoint.new(1, color2) })
+end
+
+RunService.RenderStepped:Connect(function(dt)
+    gradientAnimTime = gradientAnimTime + dt
+    for player, data in pairs(playerBoxes) do
+        local character = player.Character
+        local parts = partRegistry[player]
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        
+        local shouldShow = true
+        if EspLibLink.Drawing.Box.TeamCheck then
+            if character and character:FindFirstChild("MatchTeammateHighlight") then
+                shouldShow = false
             end
         end
 
-        Connection = Euphoria.RunService.RenderStepped:Connect(function()
-            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                local HRP = plr.Character.HumanoidRootPart
-                local Humanoid = plr.Character:WaitForChild("Humanoid")
-                local Pos, OnScreen = Cam:WorldToScreenPoint(HRP.Position)
-                local Dist = (Cam.CFrame.Position - HRP.Position).Magnitude / 3.5714285714
-                
-                local passesTeamCheck = true
-                if ESP.TeamCheck and plr.Team == lplayer.Team and plr.Team ~= nil then
-                    passesTeamCheck = false
-                end
-
-                if OnScreen and Dist <= ESP.MaxDistance and passesTeamCheck then
-                    local Size = HRP.Size.Y
-                    local scaleFactor = (Size * Cam.ViewportSize.Y) / (Pos.Z * 2)
-                    local w, h = 2.8 * scaleFactor, 4.2 * scaleFactor
-
-                    if ESP.FadeOut.OnDistance then
-                        Functions:FadeOutOnDist(BoxBackground, Dist)
-                        Functions:FadeOutOnDist(Outline, Dist)
-                        Functions:FadeOutOnDist(Name, Dist)
-                        Functions:FadeOutOnDist(Distance, Dist)
-                        Functions:FadeOutOnDist(Streak, Dist)
-                        Functions:FadeOutOnDist(Healthbar, Dist)
-                        Functions:FadeOutOnDist(BehindHealthbar, Dist)
-                        Functions:FadeOutOnDist(HealthText, Dist)
-                        Functions:FadeOutOnDist(LeftTop, Dist)
-                        Functions:FadeOutOnDist(LeftSide, Dist)
-                        Functions:FadeOutOnDist(BottomSide, Dist)
-                        Functions:FadeOutOnDist(BottomDown, Dist)
-                        Functions:FadeOutOnDist(RightTop, Dist)
-                        Functions:FadeOutOnDist(RightSide, Dist)
-                        Functions:FadeOutOnDist(BottomRightSide, Dist)
-                        Functions:FadeOutOnDist(BottomRightDown, Dist)
-                        Functions:FadeOutOnDist(Chams, Dist)
-                        Functions:FadeOutOnDist(Flag1, Dist)
-                        Functions:FadeOutOnDist(Flag2, Dist)
-                    end
-
-                    Chams.Adornee = plr.Character
-                    Chams.Enabled = ESP.Drawing.Chams.Enabled
-                    Chams.FillColor = ESP.Drawing.Chams.FillRGB
-                    Chams.OutlineColor = ESP.Drawing.Chams.OutlineRGB
-                    if ESP.Drawing.Chams.Thermal then
-                        local breathe_effect = math.atan(math.sin(tick() * 2)) * 2 / math.pi
-                        Chams.FillTransparency = ESP.Drawing.Chams.Fill_Transparency * breathe_effect * 0.01
-                        Chams.OutlineTransparency = ESP.Drawing.Chams.Outline_Transparency * breathe_effect * 0.01
-                    end
-                    if ESP.Drawing.Chams.VisibleCheck then
-                        Chams.DepthMode = "Occluded"
-                    end
-
-                    local showCorner = ESP.Drawing.Corner.Enabled
-                    LeftTop.Visible = showCorner
-                    LeftTop.BackgroundColor3 = ESP.Drawing.Corner.Color
-                    LeftTop.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y - h / 2)
-                    LeftTop.Size = UDim2.new(0, w / 5, 0, 1)
+        if shouldShow and character and parts and #parts > 0 and root and root.Parent then
+            local _, rootOnScreen = Camera:WorldToViewportPoint(root.Position)
+            if rootOnScreen and EspLibLink.Drawing.Box.Enabled then
+                local bSuccess, pos, size = getBoundingBox(parts)
+                if bSuccess then
+                    local container = data.Container
+                    container.Size = UDim2.new(0, math.floor(size.X), 0, math.floor(size.Y))
+                    container.Position = UDim2.new(0, math.floor(pos.X), 0, math.floor(pos.Y))
+                    container.Visible = true
                     
-                    LeftSide.Visible = showCorner
-                    LeftSide.BackgroundColor3 = ESP.Drawing.Corner.Color
-                    LeftSide.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y - h / 2)
-                    LeftSide.Size = UDim2.new(0, 1, 0, h / 5)
+                    local topOffset = getHighestBarOffset("Top")
+                    local bottomOffset = getHighestBarOffset("Bottom")
                     
-                    BottomSide.Visible = showCorner
-                    BottomSide.BackgroundColor3 = ESP.Drawing.Corner.Color
-                    BottomSide.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y + h / 2)
-                    BottomSide.Size = UDim2.new(0, 1, 0, h / 5)
-                    BottomSide.AnchorPoint = Vector2.new(0, 1)
-                    
-                    BottomDown.Visible = showCorner
-                    BottomDown.BackgroundColor3 = ESP.Drawing.Corner.Color
-                    BottomDown.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y + h / 2)
-                    BottomDown.Size = UDim2.new(0, w / 5, 0, 1)
-                    BottomDown.AnchorPoint = Vector2.new(0, 1)
-                    
-                    RightTop.Visible = showCorner
-                    RightTop.BackgroundColor3 = ESP.Drawing.Corner.Color
-                    RightTop.Position = UDim2.new(0, Pos.X + w / 2, 0, Pos.Y - h / 2)
-                    RightTop.Size = UDim2.new(0, w / 5, 0, 1)
-                    RightTop.AnchorPoint = Vector2.new(1, 0)
-                    
-                    RightSide.Visible = showCorner
-                    RightSide.BackgroundColor3 = ESP.Drawing.Corner.Color
-                    RightSide.Position = UDim2.new(0, Pos.X + w / 2 - 1, 0, Pos.Y - h / 2)
-                    RightSide.Size = UDim2.new(0, 1, 0, h / 5)
-                    RightSide.AnchorPoint = Vector2.new(0, 0)
-                    
-                    BottomRightSide.Visible = showCorner
-                    BottomRightSide.BackgroundColor3 = ESP.Drawing.Corner.Color
-                    BottomRightSide.Position = UDim2.new(0, Pos.X + w / 2, 0, Pos.Y + h / 2)
-                    BottomRightSide.Size = UDim2.new(0, 1, 0, h / 5)
-                    BottomRightSide.AnchorPoint = Vector2.new(1, 1)
-                    
-                    BottomRightDown.Visible = showCorner
-                    BottomRightDown.BackgroundColor3 = ESP.Drawing.Corner.Color
-                    BottomRightDown.Position = UDim2.new(0, Pos.X + w / 2, 0, Pos.Y + h / 2)
-                    BottomRightDown.Size = UDim2.new(0, w / 5, 0, 1)
-                    BottomRightDown.AnchorPoint = Vector2.new(1, 1)                                                                                  
-
-                    BoxBackground.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y - h / 2)
-                    BoxBackground.Size = UDim2.new(0, w, 0, h)
-                    
-                    BoxOutlineFrame.Position = UDim2.new(0, Pos.X - w / 2, 0, Pos.Y - h / 2)
-                    BoxOutlineFrame.Size = UDim2.new(0, w, 0, h)
-
-                    if ESP.Drawing.Filled.Enabled and (ESP.Drawing.Box.Enabled or ESP.Drawing.Corner.Enabled) then
-                        BoxBackground.Visible = true
-                        BoxBackground.BackgroundColor3 = ESP.Drawing.Filled.FillColor
-                        BoxBackground.BackgroundTransparency = ESP.Drawing.Filled.Transparency
-                    else
-                        BoxBackground.Visible = false
-                    end
-
-                    if ESP.Drawing.Box.Enabled then
-                        BoxOutlineFrame.Visible = true
-                        Outline.Enabled = true
-                    else
-                        BoxOutlineFrame.Visible = false
-                        Outline.Enabled = false
-                    end
-
-                    RotationAngle = RotationAngle + (tick() - Tick) * ESP.Drawing.Box.RotationSpeed * math.cos(math.pi / 4 * tick() - math.pi / 2)
-                    if ESP.Drawing.Box.Animate then
-                        Gradient1.Rotation = RotationAngle
-                        Gradient2.Rotation = RotationAngle
-                    else
-                        Gradient1.Rotation = -45
-                        Gradient2.Rotation = -45
-                    end
-                    Tick = tick()
-
-                    local health = Humanoid.Health / Humanoid.MaxHealth
-                    Healthbar.Visible = ESP.Drawing.Healthbar.Enabled
-                    Healthbar.Position = UDim2.new(0, Pos.X - w / 2 - 6, 0, Pos.Y - h / 2 + h * (1 - health))  
-                    Healthbar.Size = UDim2.new(0, ESP.Drawing.Healthbar.Width, 0, h * health)  
-                    
-                    BehindHealthbar.Visible = ESP.Drawing.Healthbar.Enabled
-                    BehindHealthbar.Position = UDim2.new(0, Pos.X - w / 2 - 6, 0, Pos.Y - h / 2)  
-                    BehindHealthbar.Size = UDim2.new(0, ESP.Drawing.Healthbar.Width, 0, h)
-                    
-                    if ESP.Drawing.Healthbar.HealthText then
-                        local healthPercentage = math.floor(Humanoid.Health / Humanoid.MaxHealth * 100)
-                        HealthText.Position = UDim2.new(0, Pos.X - w / 2 - 6, 0, Pos.Y - h / 2 + h * (1 - healthPercentage / 100) + 3)
-                        HealthText.Text = tostring(healthPercentage)
-                        HealthText.Visible = Humanoid.Health < Humanoid.MaxHealth
-                        if ESP.Drawing.Healthbar.Lerp then
-                            local color = health >= 0.75 and Color3.fromRGB(0, 255, 0) or health >= 0.5 and Color3.fromRGB(255, 255, 0) or health >= 0.25 and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(255, 0, 0)
-                            HealthText.TextColor3 = color
+                    local nameText = container:FindFirstChild("NameText")
+                    if nameText then
+                        if topOffset > 0 then
+                            nameText.Position = UDim2.new(0.5, 0, 0, -3 - topOffset)
                         else
-                            HealthText.TextColor3 = ESP.Drawing.Healthbar.HealthTextRGB
+                            nameText.Position = UDim2.new(0.5, 0, 0, -3)
                         end
-                    end                        
-
-                    Name.Visible = ESP.Drawing.Names.Enabled
-                    if ESP.Options.Friendcheck and lplayer:IsFriendsWith(plr.UserId) then
-                        Name.Text = string.format('(<font color="rgb(%d, %d, %d)">F</font>) %s', ESP.Options.FriendcheckRGB.R * 255, ESP.Options.FriendcheckRGB.G * 255, ESP.Options.FriendcheckRGB.B * 255, plr.Name)
+                    end
+                    
+                    local distanceText = container:FindFirstChild("DistanceText")
+                    if distanceText then
+                        if bottomOffset > 0 then
+                            distanceText.Position = UDim2.new(0.5, 0, 1, 2 + bottomOffset)
+                        else
+                            distanceText.Position = UDim2.new(0.5, 0, 1, 2)
+                        end
+                    end
+                    
+                    local localChar = LocalPlayer.Character
+                    local localRoot = localChar and localChar:FindFirstChild("HumanoidRootPart")
+                    if localRoot then distanceText.Text = math.floor((localRoot.Position - root.Position).Magnitude) .. "m" end
+                    
+                    local gradientConfig = EspLibLink.Drawing.Box.Gradient
+                    if gradientConfig.Enabled then
+                        local strokeGradient = data.MainStroke:FindFirstChildOfClass("UIGradient") or Instance.new("UIGradient")
+                        strokeGradient.Color = createSmoothGradient(gradientConfig.Color1, gradientConfig.Color2)
+                        strokeGradient.Rotation = gradientConfig.Animated and ((gradientAnimTime * gradientConfig.Speed * 360) % 360) or 45
+                        if not strokeGradient.Parent then strokeGradient.Parent = data.MainStroke end
+                        data.MainStroke.Color = Color3.fromRGB(255, 255, 255)
                     else
-                        Name.Text = string.format('(<font color="rgb(%d, %d, %d)">E</font>) %s', 255, 0, 0, plr.Name)
+                        local grad = data.MainStroke:FindFirstChildOfClass("UIGradient")
+                        if grad then grad:Destroy() end
+                        data.MainStroke.Color = Color3.fromRGB(255, 255, 255)
                     end
-                    Name.Position = UDim2.new(0, Pos.X, 0, Pos.Y - h / 2 - 9)
                     
-                    if ESP.Drawing.Distances.Enabled then
-                        if ESP.Drawing.Distances.Position == "Bottom" then
-                            Streak.Position = UDim2.new(0, Pos.X, 0, Pos.Y + h / 2 + 18)
-                            Distance.Position = UDim2.new(0, Pos.X, 0, Pos.Y + h / 2 + 7)
-                            Distance.Text = string.format("%d meters", math.floor(Dist))
-                            Distance.Visible = true
-                        elseif ESP.Drawing.Distances.Position == "Text" then
-                            Streak.Position = UDim2.new(0, Pos.X, 0, Pos.Y + h / 2 + 8)
-                            Distance.Visible = false
-                            if ESP.Options.Friendcheck and lplayer:IsFriendsWith(plr.UserId) then
-                                Name.Text = string.format('(<font color="rgb(%d, %d, %d)">F</font>) %s [%d]', ESP.Options.FriendcheckRGB.R * 255, ESP.Options.FriendcheckRGB.G * 255, ESP.Options.FriendcheckRGB.B * 255, plr.Name, math.floor(Dist))
-                            else
-                                Name.Text = string.format('(<font color="rgb(%d, %d, %d)">E</font>) %s [%d]', 255, 0, 0, plr.Name, math.floor(Dist))
+                    local glowConfig = EspLibLink.Drawing.Box.Glow
+                    data.GlowImage.Visible = glowConfig.Enabled
+                    if glowConfig.Enabled then
+                        data.GlowImage.ImageColor3 = glowConfig.Color
+                        data.GlowImage.ImageTransparency = glowConfig.Transparency 
+                    end
+                    
+                    if not displayedValues[player] then displayedValues[player] = {} end
+                    
+                    for _, barConfig in pairs(EspLibLink.Drawing.Bars or {}) do
+                        local bar = data.BarsFolder:FindFirstChild(barConfig.Name)
+                        if bar then
+                            bar.Visible = barConfig.Enabled
+                            if barConfig.Enabled then
+                                local t = barConfig.Thickness or 2
+                                local off = barConfig.Offset or 5
+                                local side = barConfig.Side or "Left"
+                                
+                                if side == "Left" then
+                                    bar.Size = UDim2.new(0, t, 1, 2)
+                                    bar.Position = UDim2.new(0, -off - t, 0, -1)
+                                elseif side == "Right" then
+                                    bar.Size = UDim2.new(0, t, 1, 2)
+                                    bar.Position = UDim2.new(1, off, 0, -1)
+                                elseif side == "Top" then
+                                    bar.Size = UDim2.new(1, 2, 0, t)
+                                    bar.Position = UDim2.new(0, -1, 0, -off - t)
+                                elseif side == "Bottom" then
+                                    bar.Size = UDim2.new(1, 2, 0, t)
+                                    bar.Position = UDim2.new(0, -1, 1, off)
+                                end
+                                
+                                local currentVal = barConfig.Values and barConfig.Values.Current or 100
+                                local maxVal = barConfig.Values and barConfig.Values.Max or 100
+                                local lastVal = bar:GetAttribute("LastValue")
+                                
+                                if not displayedValues[player][barConfig.Name] then displayedValues[player][barConfig.Name] = currentVal else displayedValues[player][barConfig.Name] = displayedValues[player][barConfig.Name] + (currentVal - displayedValues[player][barConfig.Name]) * math.clamp(dt * 15, 0, 1) end
+                                
+                                local currentDisplayVal = displayedValues[player][barConfig.Name]
+                                local ratio = math.clamp(currentVal / maxVal, 0, 1)
+                                
+                                local gradCfg = barConfig.Gradient
+                                local textColor = Color3.fromRGB(255, 255, 255)
+                                local fill = bar:FindFirstChild("Fill")
+                                local valueText = bar:FindFirstChild("ValueText")
+                                
+                                if type(gradCfg) == "table" and gradCfg.Enabled then
+                                    textColor = evaluateCustomGradientColor(gradCfg, ratio)
+                                    if fill then
+                                        fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                        local uig = fill:FindFirstChildOfClass("UIGradient")
+                                        if not uig then
+                                            uig = Instance.new("UIGradient", fill)
+                                            uig.Name = "Grad"
+                                        end
+                                        
+                                        local isHorizontal = (side == "Top" or side == "Bottom")
+                                        uig.Rotation = isHorizontal and 0 or 90
+                                        uig.Color = buildSeamlessColorSequence(gradCfg)
+                                        uig.Offset = Vector2.new(0, 0)
+                                    end
+                                else
+                                    if fill then
+                                        fill.BackgroundColor3 = barConfig.Color or Color3.fromRGB(255, 255, 255)
+                                        local uig = fill:FindFirstChildOfClass("UIGradient")
+                                        if uig then uig:Destroy() end
+                                    end
+                                    textColor = barConfig.Color or Color3.fromRGB(255, 255, 255)
+                                end
+                                
+                                if fill and valueText then
+                                    if currentVal ~= lastVal then
+                                        bar:SetAttribute("LastValue", currentVal)
+                                        local targetSize, targetPos
+                                        if side == "Left" or side == "Right" then
+                                            if barConfig.Inverted then
+                                                targetSize = UDim2.new(1, 0, ratio, 0)
+                                                targetPos = UDim2.new(0, 0, 0, 0)
+                                            else
+                                                targetSize = UDim2.new(1, 0, ratio, 0)
+                                                targetPos = UDim2.new(0, 0, 1 - ratio, 0)
+                                            end
+                                        else
+                                            if barConfig.Inverted then
+                                                targetSize = UDim2.new(ratio, 0, 1, 0)
+                                                targetPos = UDim2.new(1 - ratio, 0, 0, 0)
+                                            else
+                                                targetSize = UDim2.new(ratio, 0, 1, 0)
+                                                targetPos = UDim2.new(0, 0, 0, 0)
+                                            end
+                                        end
+                                        TweenService:Create(fill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = targetSize, Position = targetPos }):Play()
+                                    end
+                                    
+                                    if barConfig.ShowText then
+                                        local format = barConfig.TextFormat or "Value"
+                                        local textStr = tostring(math.floor(currentDisplayVal + 0.5))
+                                        if format == "Percentage" then
+                                            textStr = math.floor((currentDisplayVal / maxVal) * 100 + 0.5) .. "%"
+                                        elseif format == "Fraction" then
+                                            textStr = math.floor(currentDisplayVal + 0.5) .. "/" .. math.floor(maxVal + 0.5)
+                                        end
+                                        valueText.Text = textStr
+                                        
+                                        if barConfig.HideWhenMax then
+                                            valueText.Visible = currentVal < maxVal
+                                        else
+                                            valueText.Visible = true
+                                        end
+                                        
+                                        valueText.TextColor3 = textColor
+                                        
+                                        if side == "Left" then
+                                            valueText.AnchorPoint = Vector2.new(1, 0)
+                                            valueText.Position = UDim2.new(0, -3, 0, math.floor(bar.AbsoluteSize.Y * (1 - ratio)) - 2)
+                                        elseif side == "Right" then
+                                            valueText.AnchorPoint = Vector2.new(0, 0)
+                                            valueText.Position = UDim2.new(1, 3, 0, math.floor(bar.AbsoluteSize.Y * (1 - ratio)) - 2)
+                                        else
+                                            valueText.AnchorPoint = Vector2.new(0.5, 1)
+                                            valueText.Position = UDim2.new(ratio, 0, 0, -2)
+                                        end
+                                    else
+                                        valueText.Visible = false
+                                    end
+                                end
                             end
-                            Name.Visible = ESP.Drawing.Names.Enabled
                         end
                     end
-
-                    local streakVal = 0
-                    local stats = plr:FindFirstChild("leaderstats")
-                    if stats then
-                        local ws = stats:FindFirstChild("Winstreak")
-                        if ws then
-                            streakVal = ws.Value
-                        end
-                    end
-                    
-                    Streak.Text = string.format('Streak: %d', streakVal)
-                    Streak.TextColor3 = ESP.Drawing.Streak.RGB
-                    Streak.Visible = ESP.Drawing.Streak.Enabled
-                else
-                    HideESP()
+                    continue
                 end
-            else
-                HideESP()
             end
-        end)
+        end
+        data.Container.Visible = false
+        displayedValues[player] = nil
     end
-    coroutine.wrap(Updater)()
-end
-
-for _, v in pairs(game:GetService("Players"):GetPlayers()) do
-    if v.Name ~= lplayer.Name then
-        coroutine.wrap(ApplyESP)(v)
-    end      
-end
-
-game:GetService("Players").PlayerAdded:Connect(function(v)
-    coroutine.wrap(ApplyESP)(v)
 end)
+
+return EspLibLink
