@@ -317,7 +317,6 @@ RunService.RenderStepped:Connect(function(dt)
         local character = player.Character
         local parts = partRegistry[player]
         local root = character and character:FindFirstChild("HumanoidRootPart")
-        -- 👇 Check if the player is dead (health <= 0 or no humanoid)
         local humanoid = character and character:FindFirstChild("Humanoid")
         
         local shouldShow = true
@@ -325,7 +324,7 @@ RunService.RenderStepped:Connect(function(dt)
             shouldShow = false
         end
 
-        if shouldShow and character and parts and #parts > 0 and root and root.Parent and humanoid and humanoid.Health > 0 then
+        if shouldShow and character and parts and #parts > 0 and root and root.Parent and not character:GetAttribute("DuelCharacterInvisible") then
             local _, rootOnScreen = Camera:WorldToViewportPoint(root.Position)
             if rootOnScreen then
                 local bSuccess, pos, size = getBoundingBox(parts)
