@@ -103,12 +103,18 @@ local function is_move(input)
 	return kind == Enum.UserInputType.MouseMovement or kind == Enum.UserInputType.Touch
 end
 
-local function fit_to_screen(x, y, size_x, size_y)
+local function usable_area()
 	local viewport = camera.ViewportSize
 
+	return viewport.X, viewport.Y - gui_service:GetGuiInset().Y
+end
+
+local function fit_to_screen(x, y, size_x, size_y)
+	local wide, tall = usable_area()
+
 	return dim2(
-		0, clamp(x, 4, max(4, viewport.X - size_x - 4)),
-		0, clamp(y, 4, max(4, viewport.Y - size_y - 4))
+		0, clamp(x, 4, max(4, wide - size_x - 4)),
+		0, clamp(y, 4, max(4, tall - size_y - 4))
 	)
 end
 
@@ -143,6 +149,7 @@ local library = {
 	display_orders = 0;
 	first_user_tab = false;
 	text_size = 11;
+	mobile_scale = 0.7;
 }
 
 local flags = library.flags
@@ -274,6 +281,8 @@ library.__index = library
 for _, path in next, library.folders do
 	makefolder(library.directory .. path)
 end
+
+local mobile_icon = "rbxassetid://137270170404372"
 
 local font_source = {
 	url = "https://raw.githubusercontent.com/0x3u-debug/Fonts/main/JetBrainsMono-Regular.ttf",
@@ -619,6 +628,15 @@ function library:connection(signal, callback)
 	return connection
 end
 
+function library:apply_scale(frame)
+	if not mobile then return end
+
+	return library:create("UIScale", {
+		Parent = frame,
+		Scale = library.mobile_scale
+	})
+end
+
 function library:apply_stroke(parent)
 	local stroke = library:create("UIStroke", {
 		Parent = parent,
@@ -752,12 +770,14 @@ function library:panel(options)
 	}
 
 	if mobile then
-		local viewport = camera.ViewportSize
-		local width = min(cfg.size.X.Offset, floor(viewport.X - 16))
-		local height = min(cfg.size.Y.Offset, floor(viewport.Y - 16))
+		local scale = library.mobile_scale
+		local wide, tall = usable_area()
+
+		local width = min(cfg.size.X.Offset, floor(wide * 0.92 / scale))
+		local height = min(cfg.size.Y.Offset, floor(tall * 0.86 / scale))
 
 		cfg.size = dim2(0, width, 0, height)
-		cfg.position = fit_to_screen(cfg.position.X.Offset, cfg.position.Y.Offset, width, height)
+		cfg.position = fit_to_screen(cfg.position.X.Offset, cfg.position.Y.Offset, floor(width * scale), floor(height * scale))
 		cfg.anchor_point = vec2(0, 0)
 	end
 
@@ -779,6 +799,7 @@ function library:panel(options)
 			BorderSizePixel = 0,
 			BackgroundColor3 = themes.preset.outline
 		})
+		library:apply_scale(items.main_holder)
 		library:draggify(items.main_holder)
 		library:make_resizable(items.main_holder)
 
@@ -1057,6 +1078,7 @@ function library:watermark(options)
 		BackgroundColor3 = themes.preset.outline
 	}) library:apply_theme(watermark_outline, "outline", "BackgroundColor3")
 	watermark_outline.Position = dim_offset(watermark_outline.AbsolutePosition.X, watermark_outline.AbsolutePosition.Y)
+	library:apply_scale(watermark_outline)
 	library:draggify(watermark_outline)
 
 	local watermark_inline = library:create("Frame", {
@@ -2454,6 +2476,7 @@ function library:colorpicker(options)
 		ZIndex = 1
 	}) library:apply_theme(colorpicker_holder, "outline", "BackgroundColor3")
 
+	library:apply_scale(colorpicker_holder)
 	library:make_resizable(colorpicker_holder)
 
 	local window_inline = library:create("Frame", {
@@ -3082,6 +3105,8 @@ function library:keybind(options)
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
+	library:apply_scale(keybind_selector)
+
 	library:create("UIListLayout", {
 		Parent = keybind_selector,
 		Name = "",
@@ -3605,6 +3630,8 @@ function library:dropdown(options)
 		BackgroundColor3 = themes.preset.outline,
 		Visible = false
 	})
+
+	library:apply_scale(dropdown_holder)
 
 	local inline = library:create("Frame", {
 		Parent = dropdown_holder,
@@ -4522,6 +4549,9 @@ function library:window(properties)
 		end
 	end
 
+	local button_size = mobile and 54 or 44
+	local screen_wide, screen_tall = usable_area()
+
 	local mobile_button = library:create("ImageButton", {
 		Parent = sgui,
 		Name = "",
@@ -4530,15 +4560,56 @@ function library:window(properties)
 		AutoButtonColor = false,
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		Image = "rbxassetid://137270170404372",
+		Image = mobile_icon,
 		ImageTransparency = 0,
 		ScaleType = Enum.ScaleType.Fit,
-		Size = dim2(0, mobile and 54 or 44, 0, mobile and 54 or 44),
-		Position = dim2(0, 16, 0, 96),
+		Size = dim2(0, button_size, 0, button_size),
+		Position = dim2(0, 12, 0, floor(screen_tall / 2) - floor(button_size / 2)),
 		ZIndex = 50
 	})
 
 	window.mobile_button = mobile_button
+
+	local fallback = library:create("Frame", {
+		Parent = mobile_button,
+		Name = "",
+		Visible = false,
+		BorderSizePixel = 0,
+		Size = dim2(1, 0, 1, 0),
+		BackgroundTransparency = 0.1,
+		BackgroundColor3 = themes.preset.outline,
+		ZIndex = 49
+	}) library:apply_theme(fallback, "outline", "BackgroundColor3")
+
+	local fallback_accent = library:create("Frame", {
+		Parent = fallback,
+		Name = "",
+		Position = dim2(0, 2, 0, 2),
+		Size = dim2(1, -4, 0, 2),
+		BorderSizePixel = 0,
+		BackgroundColor3 = themes.preset.accent
+	}) library:apply_theme(fallback_accent, "accent", "BackgroundColor3")
+
+	local fallback_text = library:create("TextLabel", {
+		Parent = fallback,
+		Name = "",
+		FontFace = library.font,
+		Text = "MENU",
+		TextColor3 = themes.preset.accent,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Size = dim2(1, 0, 1, 0),
+		TextSize = library.text_size,
+		ZIndex = 50
+	}) library:apply_theme(fallback_text, "accent", "TextColor3")
+
+	window.mobile_fallback = fallback
+
+	task.delay(6, function()
+		if not mobile_button.IsLoaded then
+			fallback.Visible = true
+		end
+	end)
 
 	do
 		local held = false
@@ -4564,11 +4635,11 @@ function library:window(properties)
 					moved = true
 				end
 
-				local viewport = camera.ViewportSize
+				local wide, tall = usable_area()
 
 				mobile_button.Position = dim2(
-					0, clamp(anchor.X.Offset + dx, 0, viewport.X - mobile_button.AbsoluteSize.X),
-					0, clamp(anchor.Y.Offset + dy, 0, viewport.Y - mobile_button.AbsoluteSize.Y)
+					0, clamp(anchor.X.Offset + dx, 0, wide - mobile_button.AbsoluteSize.X),
+					0, clamp(anchor.Y.Offset + dy, 0, tall - mobile_button.AbsoluteSize.Y)
 				)
 			end
 		end)
@@ -4599,6 +4670,7 @@ function library:window(properties)
 	library:apply_theme(dock_outline, "outline", "BackgroundColor3")
 	dock_outline.Position = dim2(0, dock_outline.AbsolutePosition.X, 0, dock_outline.AbsolutePosition.Y)
 	dock_outline.AnchorPoint = vec2(0, 0)
+	library:apply_scale(dock_outline)
 	library:draggify(dock_outline)
 
 	local dock_inline = library:create("Frame", {
@@ -4686,6 +4758,7 @@ function library:window(properties)
 		BackgroundColor3 = themes.preset.outline
 	})
 	library:apply_theme(outline, "outline", "BackgroundColor3")
+	library:apply_scale(outline)
 	library:draggify(outline)
 	library:make_resizable(outline)
 	library.keybind_list_frame = outline
@@ -4941,6 +5014,32 @@ function library:window(properties)
 
 	menu_section:toggle({name = "Mobile Button", flag = "mobile_button", default = mobile, callback = function(bool)
 		mobile_button.Visible = bool
+	end})
+
+	menu_section:slider({name = "Menu Scale", flag = "menu_scale", min = 50, max = 100, default = floor(library.mobile_scale * 100), interval = 5, suffix = "%", callback = function(int)
+		library.mobile_scale = int / 100
+
+		for _, scaler in next, sgui:GetDescendants() do
+			if scaler:IsA("UIScale") then
+				scaler.Scale = library.mobile_scale
+			end
+		end
+
+		for _, panel_gui in next, library.guis do
+			for _, scaler in next, panel_gui:GetDescendants() do
+				if scaler:IsA("UIScale") then
+					scaler.Scale = library.mobile_scale
+				end
+			end
+		end
+	end})
+
+	menu_section:button_holder({})
+	menu_section:button({name = "Reset Button Pos", callback = function()
+		local wide, tall = usable_area()
+
+		mobile_button.Position = dim2(0, 12, 0, floor(tall / 2) - floor(mobile_button.AbsoluteSize.Y / 2))
+		mobile_button.Visible = true
 	end})
 
 	menu_section:slider({name = "Blur Size", flag = "Blur Size", min = 0, max = 56, default = mobile and 0 or 15, interval = 1, callback = function(int)
