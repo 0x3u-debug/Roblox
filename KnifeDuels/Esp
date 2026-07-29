@@ -181,8 +181,8 @@ local function createBoxUI(player)
     local innerBlack = createElement("Frame", { Size = UDim2.new(1, -2, 1, -2), Position = UDim2.new(0, 1, 0, 1), BackgroundTransparency = 1, ZIndex = 3 }, container)
     createStroke(Color3.fromRGB(0, 0, 0), innerBlack)
     
-    createElement("TextLabel", { Name = "NameText", Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0, -3), AnchorPoint = Vector2.new(0.5, 1), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), FontFace = customFont, TextSize = 11, AutomaticSize = Enum.AutomaticSize.XY, Text = player.Name, ZIndex = 5 }, container)
-    createElement("TextLabel", { Name = "DistanceText", Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 1, 2), AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), FontFace = customFont, TextSize = 11, AutomaticSize = Enum.AutomaticSize.XY, Text = "0m", ZIndex = 5 }, container)
+    createElement("TextLabel", { Name = "NameText", Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0, -3), AnchorPoint = Vector2.new(0.5, 1), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), FontFace = customFont, TextSize = 12, AutomaticSize = Enum.AutomaticSize.XY, Text = player.Name, ZIndex = 5 }, container)
+    createElement("TextLabel", { Name = "DistanceText", Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 1, 2), AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), FontFace = customFont, TextSize = 12, AutomaticSize = Enum.AutomaticSize.XY, Text = "0m", ZIndex = 5 }, container)
     
     local barsFolder = createElement("Folder", { Name = "BarsFolder" }, container)
     for _, barConfig in pairs(EspLibLink.Drawing.Bars or {}) do
