@@ -1,3 +1,29 @@
+local cloneref = cloneref or function(object) return object end
+local getcustomasset = getcustomasset or getsynasset
+local makefolder = makefolder or function() end
+local writefile = writefile or function() end
+local readfile = readfile or function() return nil end
+local delfile = delfile or function() end
+local listfiles = listfiles or function() return {} end
+local setclipboard = setclipboard or function() end
+
+local __hui
+local gethui = gethui or function()
+	if __hui then
+		return __hui
+	end
+
+	local ok = pcall(function()
+		local probe = Instance.new("Folder")
+		probe.Parent = game:GetService("CoreGui")
+		probe:Destroy()
+	end)
+
+	__hui = ok and game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+
+	return __hui
+end
+
 local uis = cloneref(game:GetService("UserInputService"))
 local players = cloneref(game:GetService("Players"))
 local ws = cloneref(game:GetService("Workspace"))
@@ -63,6 +89,35 @@ local find = table.find
 local remove = table.remove
 local concat = table.concat
 
+local mobile = (getgenv and getgenv().atlanta_mobile) or (uis.TouchEnabled and not uis.MouseEnabled and not uis.KeyboardEnabled)
+
+local function is_press(input)
+	local kind = input.UserInputType
+
+	return kind == Enum.UserInputType.MouseButton1 or kind == Enum.UserInputType.Touch
+end
+
+local function is_move(input)
+	local kind = input.UserInputType
+
+	return kind == Enum.UserInputType.MouseMovement or kind == Enum.UserInputType.Touch
+end
+
+local function usable_area()
+	local viewport = camera.ViewportSize
+
+	return viewport.X, viewport.Y - gui_service:GetGuiInset().Y
+end
+
+local function fit_to_screen(x, y, size_x, size_y)
+	local wide, tall = usable_area()
+
+	return dim2(
+		0, clamp(x, 4, max(4, wide - size_x - 4)),
+		0, clamp(y, 4, max(4, tall - size_y - 4))
+	)
+end
+
 local library = {
 	directory = "Atlanta",
 	folders = {
@@ -93,10 +148,14 @@ local library = {
 
 	display_orders = 0;
 	first_user_tab = false;
+	text_size = 11;
+	mobile_scale = 0.7;
 }
 
 local flags = library.flags
 local config_flags = library.config_flags
+
+library.mobile = mobile
 
 local themes = {
 	preset = {
@@ -223,23 +282,44 @@ for _, path in next, library.folders do
 	makefolder(library.directory .. path)
 end
 
-writefile("ffff.ttf", game:HttpGet("https://github.com/sametexe001/luas/blob/refs/heads/main/fonts/smallest_pixel-7.ttf"))
-
-local tahoma = {
-	name = "SmallestPixel7",
-	faces = {
-		{
-			name = "Regular",
-			weight = 400,
-			style = "normal",
-			assetId = getcustomasset("ffff.ttf")
-		}
-	}
+local mobile_icon_ids = {
+	"rbxassetid://137270170404372",
+	"rbxassetid://80382416374862",
+	"rbxthumb://type=Asset&id=137270170404372&w=150&h=150",
+	"rbxthumb://type=Asset&id=80382416374862&w=150&h=150"
 }
 
-writefile("dddd.ttf", http_service:JSONEncode(tahoma))
+local font_source = {
+	url = "https://raw.githubusercontent.com/0x3u-debug/Fonts/main/JetBrainsMono-Regular.ttf",
+	file = "jetbrains_mono",
+	name = "JetBrains Mono",
+	fallback = Enum.Font.Code
+}
 
-library.font = Font.new(getcustomasset("dddd.ttf"), Enum.FontWeight.Regular)
+local font_ok = pcall(function()
+	local face_path = library.directory .. "/fonts/" .. font_source.file .. ".ttf"
+	local family_path = library.directory .. "/fonts/" .. font_source.file .. ".json"
+
+	writefile(face_path, game:HttpGet(font_source.url))
+
+	writefile(family_path, http_service:JSONEncode({
+		name = font_source.name,
+		faces = {
+			{
+				name = "Regular",
+				weight = 400,
+				style = "normal",
+				assetId = getcustomasset(face_path)
+			}
+		}
+	}))
+
+	library.font = Font.new(getcustomasset(family_path), Enum.FontWeight.Regular)
+end)
+
+if not font_ok or not library.font then
+	library.font = Font.fromEnum(font_source.fallback)
+end
 
 local config_holder
 
@@ -266,6 +346,24 @@ function library:hoverify(hover, parent)
 		})
 	end)
 
+	if mobile then
+		hover.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Touch then
+				library:tween(hover_instance, {
+					BackgroundTransparency = 0,
+				})
+			end
+		end)
+
+		hover.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Touch then
+				library:tween(hover_instance, {
+					BackgroundTransparency = 1,
+				})
+			end
+		end)
+	end
+
 	return hover_instance
 end
 
@@ -280,23 +378,29 @@ function library:hovering(Object)
 			end
 		end
 	else
-		local y_cond = Object.AbsolutePosition.Y <= mouse.Y and mouse.Y <= Object.AbsolutePosition.Y + Object.AbsoluteSize.Y
-		local x_cond = Object.AbsolutePosition.X <= mouse.X and mouse.X <= Object.AbsolutePosition.X + Object.AbsoluteSize.X
+		local point = uis:GetMouseLocation()
+		local px, py = point.X, point.Y - gui_offset
+
+		local y_cond = Object.AbsolutePosition.Y <= py and py <= Object.AbsolutePosition.Y + Object.AbsoluteSize.Y
+		local x_cond = Object.AbsolutePosition.X <= px and px <= Object.AbsolutePosition.X + Object.AbsoluteSize.X
 
 		return (y_cond and x_cond)
 	end
 end
 
 function library:make_resizable(frame)
+	local grip = mobile and 24 or 10
+
 	local Frame = Instance.new("TextButton")
-	Frame.Position = dim2(1, -10, 1, -10)
+	Frame.Position = dim2(1, -grip, 1, -grip)
 	Frame.BorderColor3 = rgb(0, 0, 0)
-	Frame.Size = dim2(0, 10, 0, 10)
+	Frame.Size = dim2(0, grip, 0, grip)
 	Frame.BorderSizePixel = 0
 	Frame.BackgroundColor3 = rgb(255, 255, 255)
 	Frame.Parent = frame
 	Frame.BackgroundTransparency = 1
 	Frame.Text = ""
+	Frame.AutoButtonColor = false
 
 	local resizing = false
 	local start_size
@@ -304,21 +408,21 @@ function library:make_resizable(frame)
 	local og_size = frame.Size
 
 	Frame.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if is_press(input) then
 			resizing = true
 			start = input.Position
 			start_size = frame.Size
 		end
 	end)
 
-	Frame.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+	library:connection(uis.InputEnded, function(input)
+		if is_press(input) then
 			resizing = false
 		end
 	end)
 
 	library:connection(uis.InputChanged, function(input, game_event)
-		if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
+		if resizing and is_move(input) then
 			local viewport_x = camera.ViewportSize.X
 			local viewport_y = camera.ViewportSize.Y
 
@@ -347,7 +451,7 @@ function library:draggify(frame)
 	local start
 
 	frame.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if is_press(input) then
 			dragging = true
 			start = input.Position
 			start_size = frame.Position
@@ -365,14 +469,14 @@ function library:draggify(frame)
 		end
 	end)
 
-	frame.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+	library:connection(uis.InputEnded, function(input)
+		if is_press(input) then
 			dragging = false
 		end
 	end)
 
 	library:connection(uis.InputChanged, function(input, game_event)
-		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		if dragging and is_move(input) then
 			local viewport_x = camera.ViewportSize.X
 			local viewport_y = camera.ViewportSize.Y
 
@@ -447,8 +551,13 @@ function library:config_list_update()
 	if not config_holder then return end
 
 	local list = {}
+	local ok, files = pcall(listfiles, library.directory .. "/configs")
 
-	for idx, file in next, listfiles(library.directory .. "/configs") do
+	if not ok or type(files) ~= "table" then
+		files = {}
+	end
+
+	for idx, file in next, files do
 		local name = string.sub(file:gsub(library.directory .. "/configs\\", ""):gsub(library.directory .. "\\configs\\", ""), 1, -5)
 		list[#list + 1] = name
 	end
@@ -522,6 +631,35 @@ function library:connection(signal, callback)
 	insert(library.connections, connection)
 
 	return connection
+end
+
+function library:auto_scale()
+	if not mobile then return 1 end
+
+	local wide, tall = usable_area()
+
+	return clamp(min((wide * 0.6) / 604, (tall * 0.75) / 628), 0.25, 1)
+end
+
+function library:set_scale(value)
+	library.mobile_scale = value
+
+	for _, gui in next, library.guis do
+		for _, scaler in next, gui:GetDescendants() do
+			if scaler:IsA("UIScale") then
+				scaler.Scale = value
+			end
+		end
+	end
+end
+
+function library:apply_scale(frame)
+	if not mobile then return end
+
+	return library:create("UIScale", {
+		Parent = frame,
+		Scale = library.mobile_scale
+	})
 end
 
 function library:apply_stroke(parent)
@@ -615,7 +753,7 @@ function library:tool_tip(options)
 			Position = dim2(0, 0, 0, -1),
 			BorderSizePixel = 0,
 			AutomaticSize = Enum.AutomaticSize.X,
-			TextSize = 12,
+			TextSize = library.text_size,
 			BackgroundColor3 = rgb(255, 255, 255)
 		})
 
@@ -634,7 +772,7 @@ function library:tool_tip(options)
 		end)
 
 		library:connection(uis.InputChanged, function(input)
-			if watermark_outline.Visible and input.UserInputType == Enum.UserInputType.MouseMovement then
+			if watermark_outline.Visible and is_move(input) then
 				watermark_outline.Position = dim_offset(input.Position.X + 10, input.Position.Y + 10)
 			end
 		end)
@@ -656,6 +794,18 @@ function library:panel(options)
 		items = {},
 	}
 
+	if mobile then
+		local scale = library.mobile_scale
+
+		cfg.position = fit_to_screen(
+			cfg.position.X.Offset,
+			cfg.position.Y.Offset,
+			floor(cfg.size.X.Offset * scale),
+			floor(cfg.size.Y.Offset * scale)
+		)
+		cfg.anchor_point = vec2(0, 0)
+	end
+
 	local items = cfg.items do
 		items.sgui = library:create("ScreenGui", {
 			Enabled = true,
@@ -674,6 +824,7 @@ function library:panel(options)
 			BorderSizePixel = 0,
 			BackgroundColor3 = themes.preset.outline
 		})
+		library:apply_scale(items.main_holder)
 		library:draggify(items.main_holder)
 		library:make_resizable(items.main_holder)
 
@@ -693,7 +844,7 @@ function library:panel(options)
 			TextXAlignment = Enum.TextXAlignment.Right;
 			AutomaticSize = Enum.AutomaticSize.XY;
 			TextColor3 = themes.preset.text;
-			TextSize = 12;
+			TextSize = library.text_size;
 			ZIndex = 100;
 			BackgroundColor3 = rgb(255, 255, 255)
 		})
@@ -748,7 +899,7 @@ function library:panel(options)
 			Position = dim2(0, 2, 0, 4),
 			BorderSizePixel = 0,
 			AutomaticSize = Enum.AutomaticSize.XY,
-			TextSize = 12,
+			TextSize = library.text_size,
 			BackgroundColor3 = rgb(255, 255, 255)
 		}) library:apply_theme(items.text, "accent", "TextColor3")
 
@@ -952,6 +1103,7 @@ function library:watermark(options)
 		BackgroundColor3 = themes.preset.outline
 	}) library:apply_theme(watermark_outline, "outline", "BackgroundColor3")
 	watermark_outline.Position = dim_offset(watermark_outline.AbsolutePosition.X, watermark_outline.AbsolutePosition.Y)
+	library:apply_scale(watermark_outline)
 	library:draggify(watermark_outline)
 
 	local watermark_inline = library:create("Frame", {
@@ -993,7 +1145,7 @@ function library:watermark(options)
 		Position = dim2(0, -1, 0, 1),
 		BorderSizePixel = 0,
 		AutomaticSize = Enum.AutomaticSize.X,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -1099,7 +1251,7 @@ function library:notification(properties)
 		Position = dim2(0, 0, 0, -1),
 		BorderSizePixel = 0,
 		AutomaticSize = Enum.AutomaticSize.X,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -1187,7 +1339,7 @@ function library:tab(options)
 		Size = dim2(0, 0, 1, -2),
 		ZIndex = 5,
 		LayoutOrder = cfg.order,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = themes.preset.outline,
 		AutoButtonColor = false
 	}) library:apply_theme(tab_holder, "outline", "BackgroundColor3")
@@ -1231,7 +1383,7 @@ function library:tab(options)
 		Size = dim2(1, 0, 1, 0),
 		BorderSizePixel = 0,
 		AutomaticSize = Enum.AutomaticSize.X,
-		TextSize = 12,
+		TextSize = library.text_size,
 		ZIndex = 5,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
@@ -1423,7 +1575,7 @@ function library:multi_section(options)
 			BorderSizePixel = 0,
 			Size = dim2(0, 0, 1, 0),
 			ZIndex = 1,
-			TextSize = 12,
+			TextSize = library.text_size,
 			BackgroundColor3 = themes.preset.outline
 		}) library:apply_theme(tabb, "outline", "BackgroundColor3")
 
@@ -1456,7 +1608,7 @@ function library:multi_section(options)
 			Size = dim2(1, 0, 1, 0),
 			BorderSizePixel = 0,
 			AutomaticSize = Enum.AutomaticSize.X,
-			TextSize = 12,
+			TextSize = library.text_size,
 			BackgroundColor3 = rgb(255, 255, 255)
 		}) library:apply_theme(text, "accent", "TextColor3")
 
@@ -1583,7 +1735,7 @@ function library:section(options)
 		Position = dim2(0, 6, 0, 4),
 		BorderSizePixel = 0,
 		AutomaticSize = Enum.AutomaticSize.XY,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -1846,6 +1998,8 @@ function library:slider(options)
 		value = options.default or 10,
 	}
 
+	local bar_height = mobile and 20 or 12
+
 	local slider_REAL = library:create("TextLabel", {
 		Parent = self.holder,
 		FontFace = library.font,
@@ -1854,13 +2008,13 @@ function library:slider(options)
 		Text = "",
 		Name = "slider",
 		ZIndex = 1,
-		Size = dim2(1, -8, 0, 12),
+		Size = dim2(1, -8, 0, bar_height),
 		BorderSizePixel = 0,
 		BackgroundTransparency = 1,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		AutomaticSize = Enum.AutomaticSize.Y,
 		TextYAlignment = Enum.TextYAlignment.Top,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -1888,7 +2042,7 @@ function library:slider(options)
 			Size = dim2(0, 0, 1, -1),
 			BorderSizePixel = 0,
 			AutomaticSize = Enum.AutomaticSize.X,
-			TextSize = 12,
+			TextSize = library.text_size,
 			BackgroundColor3 = rgb(255, 255, 255)
 		})
 
@@ -1915,7 +2069,7 @@ function library:slider(options)
 		Name = "slider",
 		Position = dim2(0, 0, 0, 2),
 		BorderColor3 = rgb(0, 0, 0),
-		Size = dim2(1, -1, 1, 12),
+		Size = dim2(1, -1, 1, bar_height),
 		BorderSizePixel = 0,
 		BackgroundColor3 = themes.preset.outline,
 		Text = "",
@@ -1966,7 +2120,7 @@ function library:slider(options)
 		Position = dim2(0, 0, 0, -1),
 		Size = dim2(1, 0, 1, 0),
 		BorderSizePixel = 0,
-		TextSize = 12,
+		TextSize = library.text_size,
 		ZIndex = 2,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
@@ -2035,7 +2189,7 @@ function library:slider(options)
 
 	if not cfg.input_disabled then
 		library:connection(uis.InputChanged, function(input)
-			if cfg.dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			if cfg.dragging and is_move(input) then
 				local size_x = (input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X
 				local value = ((cfg.max - cfg.min) * size_x) + cfg.min
 				cfg.set(value)
@@ -2043,13 +2197,18 @@ function library:slider(options)
 		end)
 
 		library:connection(uis.InputEnded, function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if is_press(input) then
 				cfg.dragging = false
 			end
 		end)
 
-		slider.MouseButton1Down:Connect(function()
-			cfg.dragging = true
+		slider.InputBegan:Connect(function(input)
+			if is_press(input) then
+				cfg.dragging = true
+
+				local size_x = (input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X
+				cfg.set(((cfg.max - cfg.min) * size_x) + cfg.min)
+			end
 		end)
 	end
 
@@ -2096,7 +2255,7 @@ function library:toggle(options)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		AutomaticSize = Enum.AutomaticSize.Y,
 		TextYAlignment = Enum.TextYAlignment.Top,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -2147,7 +2306,7 @@ function library:toggle(options)
 		Size = dim2(0, 0, 1, -1),
 		BorderSizePixel = 0,
 		AutomaticSize = Enum.AutomaticSize.X,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -2342,6 +2501,7 @@ function library:colorpicker(options)
 		ZIndex = 1
 	}) library:apply_theme(colorpicker_holder, "outline", "BackgroundColor3")
 
+	library:apply_scale(colorpicker_holder)
 	library:make_resizable(colorpicker_holder)
 
 	local window_inline = library:create("Frame", {
@@ -2382,7 +2542,7 @@ function library:colorpicker(options)
 		Position = dim2(0, 2, 0, 4),
 		BorderSizePixel = 0,
 		AutomaticSize = Enum.AutomaticSize.XY,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -2723,7 +2883,7 @@ function library:colorpicker(options)
 			end
 
 			library.current_element_open = cfg
-			colorpicker_holder.Position = dim2(0, colorpicker_button.AbsolutePosition.X + 1, 0, colorpicker_button.AbsolutePosition.Y + 17)
+			colorpicker_holder.Position = fit_to_screen(colorpicker_button.AbsolutePosition.X + 1, colorpicker_button.AbsolutePosition.Y + 17, colorpicker_holder.AbsoluteSize.X, colorpicker_holder.AbsoluteSize.Y)
 		end
 	end
 
@@ -2772,35 +2932,45 @@ function library:colorpicker(options)
 		cfg.callback(Color, a)
 	end
 
-	function cfg.update_color()
-		local mouse = uis:GetMouseLocation()
+	function cfg.update_color(position)
+		local point = position or uis:GetMouseLocation()
+		local px = vec2(point.X, point.Y - gui_offset)
 
 		if dragging_sat then
-			s = clamp((vec2(mouse.X, mouse.Y - gui_offset) - val.AbsolutePosition).X / val.AbsoluteSize.X, 0, 1)
-			v = 1 - clamp((vec2(mouse.X, mouse.Y - gui_offset) - sat.AbsolutePosition).Y / sat.AbsoluteSize.Y, 0, 1)
+			s = clamp((px - val.AbsolutePosition).X / val.AbsoluteSize.X, 0, 1)
+			v = 1 - clamp((px - sat.AbsolutePosition).Y / sat.AbsoluteSize.Y, 0, 1)
 		elseif dragging_hue then
-			h = clamp(1 - (vec2(mouse.X, mouse.Y - gui_offset) - hue.AbsolutePosition).Y / hue.AbsoluteSize.Y, 0, 1)
+			h = clamp(1 - (px - hue.AbsolutePosition).Y / hue.AbsoluteSize.Y, 0, 1)
 		elseif dragging_alpha then
-			a = clamp((vec2(mouse.X, mouse.Y - gui_offset) - alpha.AbsolutePosition).X / alpha.AbsoluteSize.X, 0, 1)
+			a = clamp((px - alpha.AbsolutePosition).X / alpha.AbsoluteSize.X, 0, 1)
 		end
 
 		cfg.set(nil, nil)
 	end
 
-	alpha.MouseButton1Down:Connect(function()
-		dragging_alpha = true
+	alpha.InputBegan:Connect(function(input)
+		if is_press(input) then
+			dragging_alpha = true
+			cfg.update_color(input.Position)
+		end
 	end)
 
-	hue.MouseButton1Down:Connect(function()
-		dragging_hue = true
+	hue.InputBegan:Connect(function(input)
+		if is_press(input) then
+			dragging_hue = true
+			cfg.update_color(input.Position)
+		end
 	end)
 
-	sat.MouseButton1Down:Connect(function()
-		dragging_sat = true
+	sat.InputBegan:Connect(function(input)
+		if is_press(input) then
+			dragging_sat = true
+			cfg.update_color(input.Position)
+		end
 	end)
 
 	library:connection(uis.InputEnded, function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if is_press(input) then
 			dragging_sat = false
 			dragging_hue = false
 			dragging_alpha = false
@@ -2808,8 +2978,8 @@ function library:colorpicker(options)
 	end)
 
 	library:connection(uis.InputChanged, function(input)
-		if (dragging_sat or dragging_hue or dragging_alpha) and input.UserInputType == Enum.UserInputType.MouseMovement then
-			cfg.update_color()
+		if (dragging_sat or dragging_hue or dragging_alpha) and is_move(input) then
+			cfg.update_color(input.Position)
 		end
 	end)
 
@@ -2866,7 +3036,7 @@ function library:keybind(options)
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextTruncate = Enum.TextTruncate.AtEnd,
 			AutomaticSize = Enum.AutomaticSize.Y,
-			TextSize = 12,
+			TextSize = library.text_size,
 			BackgroundColor3 = themes.preset.text
 		})
 	end
@@ -2939,7 +3109,7 @@ function library:keybind(options)
 		Position = dim2(0, 0, 0, -2),
 		BorderSizePixel = 0,
 		AutomaticSize = Enum.AutomaticSize.XY,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -2960,6 +3130,8 @@ function library:keybind(options)
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
+	library:apply_scale(keybind_selector)
+
 	library:create("UIListLayout", {
 		Parent = keybind_selector,
 		Name = "",
@@ -2979,7 +3151,7 @@ function library:keybind(options)
 		AutomaticSize = Enum.AutomaticSize.XY,
 		BorderSizePixel = 0,
 		ZIndex = 2,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -3009,7 +3181,7 @@ function library:keybind(options)
 		AutomaticSize = Enum.AutomaticSize.XY,
 		BorderSizePixel = 0,
 		ZIndex = 2,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -3030,7 +3202,7 @@ function library:keybind(options)
 		AutomaticSize = Enum.AutomaticSize.XY,
 		BorderSizePixel = 0,
 		ZIndex = 2,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -3057,7 +3229,7 @@ function library:keybind(options)
 
 	function cfg.set_visible(bool)
 		keybind_selector.Visible = bool
-		keybind_selector.Position = dim2(0, element_outline.AbsolutePosition.X + 1, 0, element_outline.AbsolutePosition.Y + 17)
+		keybind_selector.Position = fit_to_screen(element_outline.AbsolutePosition.X + 1, element_outline.AbsolutePosition.Y + 17, keybind_selector.AbsoluteSize.X, keybind_selector.AbsoluteSize.Y)
 
 		if bool then
 			if library.current_element_open and library.current_element_open ~= cfg then
@@ -3178,27 +3350,35 @@ function library:keybind(options)
 		cfg.open = false
 	end)
 
-	element_outline.MouseButton2Click:Connect(function()
-		cfg.open = not cfg.open
+	if mobile then
+		element_outline.MouseButton1Click:Connect(function()
+			cfg.open = not cfg.open
 
-		cfg.set_visible(cfg.open)
-	end)
-
-	element_outline.MouseButton1Down:Connect(function()
-		task.wait()
-		key_text.Text = "none"
-
-		if cfg.binding then return end
-
-		cfg.binding = library:connection(uis.InputBegan, function(input, game_event)
-			local selected_key = input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode or input.UserInputType
-
-			cfg.set(selected_key)
-
-			cfg.binding:Disconnect()
-			cfg.binding = nil
+			cfg.set_visible(cfg.open)
 		end)
-	end)
+	else
+		element_outline.MouseButton2Click:Connect(function()
+			cfg.open = not cfg.open
+
+			cfg.set_visible(cfg.open)
+		end)
+
+		element_outline.MouseButton1Down:Connect(function()
+			task.wait()
+			key_text.Text = "none"
+
+			if cfg.binding then return end
+
+			cfg.binding = library:connection(uis.InputBegan, function(input, game_event)
+				local selected_key = input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode or input.UserInputType
+
+				cfg.set(selected_key)
+
+				cfg.binding:Disconnect()
+				cfg.binding = nil
+			end)
+		end)
+	end
 
 	library:connection(uis.InputBegan, function(input, game_event)
 		local selected_key = input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode or input.UserInputType
@@ -3273,7 +3453,7 @@ function library:dropdown(options)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		AutomaticSize = Enum.AutomaticSize.Y,
 		TextYAlignment = Enum.TextYAlignment.Top,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -3301,7 +3481,7 @@ function library:dropdown(options)
 			Size = dim2(0, 0, 1, -1),
 			BorderSizePixel = 0,
 			AutomaticSize = Enum.AutomaticSize.X,
-			TextSize = 12,
+			TextSize = library.text_size,
 			BackgroundColor3 = rgb(255, 255, 255)
 		})
 
@@ -3432,7 +3612,7 @@ function library:dropdown(options)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		BorderSizePixel = 0,
 		TextTruncate = Enum.TextTruncate.AtEnd,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -3475,6 +3655,8 @@ function library:dropdown(options)
 		BackgroundColor3 = themes.preset.outline,
 		Visible = false
 	})
+
+	library:apply_scale(dropdown_holder)
 
 	local inline = library:create("Frame", {
 		Parent = dropdown_holder,
@@ -3584,7 +3766,7 @@ function library:dropdown(options)
 		dropdown_holder.Visible = bool
 
 		plus.Text = bool and "-" or "+"
-		plus.TextSize = bool and 12 or 8
+		plus.TextSize = bool and library.text_size or library.text_size - 4
 
 		if bool then
 			if library.current_element_open and library.current_element_open ~= cfg and not cfg.ignore then
@@ -3593,7 +3775,7 @@ function library:dropdown(options)
 			end
 
 			dropdown_holder.Size = dim2(0, dropdown.AbsoluteSize.X, 0, dropdown_holder.Size.Y.Offset)
-			dropdown_holder.Position = dim2(0, dropdown.AbsolutePosition.X + 1, 0, dropdown.AbsolutePosition.Y + 22)
+			dropdown_holder.Position = fit_to_screen(dropdown.AbsolutePosition.X + 1, dropdown.AbsolutePosition.Y + 22, dropdown.AbsoluteSize.X, dropdown_holder.AbsoluteSize.Y)
 		end
 	end
 
@@ -3636,7 +3818,7 @@ function library:dropdown(options)
 				BorderSizePixel = 0,
 				TextWrapped = true,
 				AutomaticSize = Enum.AutomaticSize.Y,
-				TextSize = 12,
+				TextSize = library.text_size,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				ZIndex = 2,
 				Text = v,
@@ -3717,7 +3899,7 @@ function library:list(options)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		AutomaticSize = Enum.AutomaticSize.Y,
 		TextYAlignment = Enum.TextYAlignment.Top,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -3848,7 +4030,7 @@ function library:list(options)
 			Size = dim2(1, 0, 0, 0),
 			BorderSizePixel = 0,
 			AutomaticSize = Enum.AutomaticSize.Y,
-			TextSize = 12,
+			TextSize = library.text_size,
 			BackgroundColor3 = rgb(255, 255, 255)
 		})
 
@@ -3953,7 +4135,7 @@ function library:textbox(options)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		AutomaticSize = Enum.AutomaticSize.Y,
 		TextYAlignment = Enum.TextYAlignment.Top,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -4023,7 +4205,7 @@ function library:textbox(options)
 		PlaceholderText = cfg.placeholder,
 		ClearTextOnFocus = false,
 		ZIndex = 3;
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -4112,7 +4294,7 @@ function library:button_holder(options)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		AutomaticSize = Enum.AutomaticSize.Y,
 		TextYAlignment = Enum.TextYAlignment.Top,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255),
 	})
 
@@ -4235,7 +4417,7 @@ function library:button(options)
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		BorderSizePixel = 0,
 		FontFace = library.font,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -4269,7 +4451,7 @@ function library:label(options)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		AutomaticSize = Enum.AutomaticSize.Y,
 		TextYAlignment = Enum.TextYAlignment.Top,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -4300,7 +4482,7 @@ function library:label(options)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		BorderSizePixel = 0,
 		AutomaticSize = Enum.AutomaticSize.Y,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
 
@@ -4337,13 +4519,15 @@ function library:label(options)
 end
 
 function library:window(properties)
+	library.mobile_scale = library:auto_scale()
+
 	local window = {opened = true}
 	local opened = {}
 	local dock_outline
 	local blur = library:create("BlurEffect", {
 		Parent = lighting;
 		Enabled = true;
-		Size = 15
+		Size = mobile and 0 or 15
 	})
 
 	library.cache = library:create("ScreenGui", {
@@ -4392,6 +4576,136 @@ function library:window(properties)
 		end
 	end
 
+	local screen_wide, screen_tall = usable_area()
+	local button_size = clamp(floor(min(screen_wide, screen_tall) * 0.11), 34, 56)
+
+	local mobile_button = library:create("ImageButton", {
+		Parent = sgui,
+		Name = "",
+		Visible = mobile,
+		Active = true,
+		AutoButtonColor = false,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Image = mobile_icon_ids[1],
+		ImageTransparency = 0,
+		ScaleType = Enum.ScaleType.Fit,
+		Size = dim2(0, button_size, 0, button_size),
+		Position = dim2(0, 12, 0, floor(screen_tall / 2) - floor(button_size / 2)),
+		ZIndex = 50
+	})
+
+	window.mobile_button = mobile_button
+
+	local fallback = library:create("Frame", {
+		Parent = mobile_button,
+		Name = "",
+		Visible = false,
+		BorderSizePixel = 0,
+		Size = dim2(1, 0, 1, 0),
+		BackgroundTransparency = 0.1,
+		BackgroundColor3 = themes.preset.outline,
+		ZIndex = 49
+	}) library:apply_theme(fallback, "outline", "BackgroundColor3")
+
+	local fallback_accent = library:create("Frame", {
+		Parent = fallback,
+		Name = "",
+		Position = dim2(0, 2, 0, 2),
+		Size = dim2(1, -4, 0, 2),
+		BorderSizePixel = 0,
+		BackgroundColor3 = themes.preset.accent
+	}) library:apply_theme(fallback_accent, "accent", "BackgroundColor3")
+
+	local fallback_text = library:create("TextLabel", {
+		Parent = fallback,
+		Name = "",
+		FontFace = library.font,
+		Text = "MENU",
+		TextColor3 = themes.preset.accent,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Size = dim2(1, 0, 1, 0),
+		TextSize = library.text_size,
+		ZIndex = 50
+	}) library:apply_theme(fallback_text, "accent", "TextColor3")
+
+	window.mobile_fallback = fallback
+
+	task.spawn(function()
+		for _, asset in next, mobile_icon_ids do
+			mobile_button.Image = asset
+
+			local deadline = tick() + 3
+
+			repeat
+				task.wait(0.1)
+			until mobile_button.IsLoaded or tick() > deadline
+
+			if mobile_button.IsLoaded then
+				fallback.Visible = false
+				return
+			end
+		end
+
+		fallback.Visible = true
+	end)
+
+	library:connection(camera:GetPropertyChangedSignal("ViewportSize"), function()
+		library:set_scale(library:auto_scale())
+
+		local wide, tall = usable_area()
+
+		mobile_button.Position = dim2(
+			0, clamp(mobile_button.Position.X.Offset, 0, max(0, wide - mobile_button.AbsoluteSize.X)),
+			0, clamp(mobile_button.Position.Y.Offset, 0, max(0, tall - mobile_button.AbsoluteSize.Y))
+		)
+	end)
+
+	do
+		local held = false
+		local moved = false
+		local origin
+		local anchor
+
+		mobile_button.InputBegan:Connect(function(input)
+			if is_press(input) then
+				held = true
+				moved = false
+				origin = input.Position
+				anchor = mobile_button.Position
+			end
+		end)
+
+		library:connection(uis.InputChanged, function(input)
+			if held and is_move(input) then
+				local dx = input.Position.X - origin.X
+				local dy = input.Position.Y - origin.Y
+
+				if abs(dx) > 6 or abs(dy) > 6 then
+					moved = true
+				end
+
+				local wide, tall = usable_area()
+
+				mobile_button.Position = dim2(
+					0, clamp(anchor.X.Offset + dx, 0, wide - mobile_button.AbsoluteSize.X),
+					0, clamp(anchor.Y.Offset + dy, 0, tall - mobile_button.AbsoluteSize.Y)
+				)
+			end
+		end)
+
+		library:connection(uis.InputEnded, function(input)
+			if held and is_press(input) then
+				held = false
+
+				if not moved then
+					window.set_menu_visibility(not window.opened)
+				end
+			end
+		end)
+	end
+
 	dock_outline = library:create("Frame", {
 		Parent = sgui,
 		Name = "",
@@ -4407,6 +4721,7 @@ function library:window(properties)
 	library:apply_theme(dock_outline, "outline", "BackgroundColor3")
 	dock_outline.Position = dim2(0, dock_outline.AbsolutePosition.X, 0, dock_outline.AbsolutePosition.Y)
 	dock_outline.AnchorPoint = vec2(0, 0)
+	library:apply_scale(dock_outline)
 	library:draggify(dock_outline)
 
 	local dock_inline = library:create("Frame", {
@@ -4494,6 +4809,7 @@ function library:window(properties)
 		BackgroundColor3 = themes.preset.outline
 	})
 	library:apply_theme(outline, "outline", "BackgroundColor3")
+	library:apply_scale(outline)
 	library:draggify(outline)
 	library:make_resizable(outline)
 	library.keybind_list_frame = outline
@@ -4558,7 +4874,7 @@ function library:window(properties)
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		Size = dim2(1, 0, 1, 0),
 		BorderSizePixel = 0,
-		TextSize = 12,
+		TextSize = library.text_size,
 		BackgroundColor3 = themes.preset.text
 	})
 
@@ -4747,7 +5063,27 @@ function library:window(properties)
 		watermark.set_visible(bool)
 	end})
 
-	menu_section:slider({name = "Blur Size", flag = "Blur Size", min = 0, max = 56, default = 15, interval = 1, callback = function(int)
+	menu_section:toggle({name = "Mobile Button", flag = "mobile_button", default = mobile, callback = function(bool)
+		mobile_button.Visible = bool
+	end})
+
+	menu_section:slider({name = "Button Size", flag = "mobile_button_size", min = 28, max = 72, default = button_size, interval = 2, callback = function(int)
+		mobile_button.Size = dim2(0, int, 0, int)
+	end})
+
+	menu_section:slider({name = "Menu Scale", flag = "menu_scale", min = 25, max = 100, default = floor(library.mobile_scale * 100), interval = 5, suffix = "%", callback = function(int)
+		library:set_scale(int / 100)
+	end})
+
+	menu_section:button_holder({})
+	menu_section:button({name = "Reset Button Pos", callback = function()
+		local wide, tall = usable_area()
+
+		mobile_button.Position = dim2(0, 12, 0, floor(tall / 2) - floor(mobile_button.AbsoluteSize.Y / 2))
+		mobile_button.Visible = true
+	end})
+
+	menu_section:slider({name = "Blur Size", flag = "Blur Size", min = 0, max = 56, default = mobile and 0 or 15, interval = 1, callback = function(int)
 		if window.opened then
 			blur.Size = int
 		end
@@ -4837,8 +5173,14 @@ function library:window(properties)
 
 	local config_items = config_panel.items
 
-	getgenv().load_config = function(name)
-		library:load_config(readfile(library.directory .. "/configs/" .. name .. ".cfg"))
+	if mobile then
+		config_items.sgui.Enabled = false
+	end
+
+	if getgenv then
+		getgenv().load_config = function(name)
+			library:load_config(readfile(library.directory .. "/configs/" .. name .. ".cfg"))
+		end
 	end
 
 	local config_column = setmetatable(config_items, library):column()
@@ -4901,5 +5243,130 @@ function library.get_priority()
 end
 
 function library.prioritize() end
+
+local example = false
+
+if example then
+	local window = library:window({name = "Atlanta | example"})
+
+	local main = window:tab({name = "Main", order = 1})
+	local visuals = window:tab({name = "Visuals", order = 2})
+
+	local main_left = main:column()
+	local main_right = main:column()
+
+	local inputs = main_left:section({name = "Inputs"})
+
+	local demo_toggle = inputs:toggle({name = "Toggle", flag = "demo_toggle", default = true, tooltip = "toggles the nested group"})
+
+	demo_toggle:colorpicker({name = "Toggle Color", flag = "demo_toggle_color", color = hex("#6078BE"), alpha = 1})
+	demo_toggle:keybind({name = "Toggle", flag = "demo_toggle_key", mode = "toggle"})
+
+	local toggle_group = demo_toggle:group({})
+
+	toggle_group:slider({name = "Nested Slider", flag = "demo_nested_slider", min = 0, max = 100, default = 40, suffix = "%"})
+	toggle_group:toggle({name = "Nested Toggle", flag = "demo_nested_toggle"})
+
+	local inverted_group = demo_toggle:group({invert = true})
+
+	inverted_group:label({name = "shown while the toggle is off"})
+
+	inputs:slider({name = "Slider", flag = "demo_slider", min = 0, max = 250, default = 120, interval = 1})
+	inputs:slider({name = "Decimal Slider", flag = "demo_decimal", min = 0, max = 5, default = 1.5, interval = 0.1})
+
+	local mode = inputs:dropdown({name = "Dropdown", flag = "demo_mode", items = {"First", "Second", "Third"}})
+
+	local mode_group = mode:group({value = "Second"})
+
+	mode_group:toggle({name = "Only On Second", flag = "demo_second_only"})
+
+	inputs:dropdown({name = "Multi Dropdown", flag = "demo_multi", items = {"Alpha", "Beta", "Gamma", "Delta"}, multi = true, default = {"Alpha"}})
+
+	local scroll_items = {}
+
+	for i = 1, 24 do
+		scroll_items[i] = "entry " .. i
+	end
+
+	inputs:dropdown({name = "Scrolling Dropdown", flag = "demo_scroll", items = scroll_items, scrolling = true})
+	inputs:textbox({flag = "demo_text", placeholder = "type here..."})
+
+	inputs:button_holder({})
+	inputs:button({name = "Notify", callback = function()
+		library:notification({text = "hello from atlanta", time = 3})
+	end})
+	inputs:button({name = "Hide Menu", callback = function()
+		window.set_menu_visibility(false)
+	end})
+
+	local lists = main_left:section({name = "Players"})
+
+	local player_list = lists:list({flag = "demo_list", size = 120, items = {}})
+
+	lists:textbox({flag = "demo_search", placeholder = "search...", callback = function(text)
+		player_list.filter_options(text)
+	end})
+
+	lists:button_holder({})
+	lists:button({name = "Refresh", callback = function()
+		local names = {}
+
+		for _, plr in next, players:GetPlayers() do
+			insert(names, plr.Name)
+		end
+
+		player_list.refresh_options(names)
+	end})
+
+	local page_one, page_two = main_right:multi_section({names = {"Page One", "Page Two"}})
+
+	page_one:toggle({name = "Example Toggle", flag = "demo_page_one_toggle", default = true})
+	page_one:slider({name = "Example Slider", flag = "demo_page_one_slider", min = 0, max = 100, default = 25, suffix = "%"})
+	page_one:dropdown({name = "Example Dropdown", flag = "demo_page_one_dropdown", items = {"One", "Two", "Three"}})
+
+	page_two:toggle({name = "Second Page Toggle", flag = "demo_page_two_toggle"})
+	page_two:label({name = "Multi sections share one panel"})
+
+	local info = main_right:section({name = "Info"})
+
+	info:label({name = "Mobile detected: " .. tostring(library.mobile)})
+	info:label({name = "Menu bind: Insert"})
+	info:label({name = "Drag the icon to move it, tap to toggle"})
+	info:label({name = "Extra Bind"}):keybind({name = "Extra Bind", flag = "demo_extra_bind", mode = "hold"})
+
+	local visuals_left = visuals:column()
+	local visuals_right = visuals:column()
+
+	local colors = visuals_left:section({name = "Colors"})
+
+	local fill = colors:toggle({name = "Fill", flag = "demo_fill", default = true})
+
+	fill:colorpicker({name = "Fill Color", flag = "demo_fill_color", color = hex("#6078BE"), alpha = 0.5})
+
+	local outline_toggle = colors:toggle({name = "Outline", flag = "demo_outline"})
+
+	outline_toggle:colorpicker({name = "Outline Color", flag = "demo_outline_color", color = rgb(0, 0, 0)})
+
+	colors:label({name = "Menu Accent"}):colorpicker({name = "Accent", flag = "demo_accent", color = themes.preset.accent, callback = function(picked)
+		library:update_theme("accent", picked)
+	end})
+
+	local preview = visuals_right:section({name = "Preview"})
+
+	local status = preview:label({name = "Live Value: 50"})
+
+	preview:slider({name = "Live Value", flag = "demo_live", min = 0, max = 100, default = 50, interval = 1, callback = function(value)
+		status.set("Live Value: " .. value)
+	end})
+
+	preview:dropdown({name = "Preview Mode", flag = "demo_preview_mode", items = {"Box", "Corner", "Outline"}})
+
+	preview:button_holder({})
+	preview:button({name = "Reset Accent", callback = function()
+		library:update_theme("accent", hex("#6078BE"))
+	end})
+
+	library:notification({text = "atlanta loaded", time = 4})
+end
 
 return library, themes
