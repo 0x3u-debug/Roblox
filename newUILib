@@ -743,6 +743,16 @@ function library:autoload_config()
 	return name
 end
 
+function library:set_text_size(size)
+	library.text_size = max(6, floor(size))
+	library.row_height = library.text_size + 1
+	library.control_height = library.text_size + 3
+	library.field_height = library.text_size + 7
+	library.header_height = library.text_size + 9
+
+	return library.text_size
+end
+
 function library:next_flag(kind)
 	library.flag_counter += 1
 
@@ -1122,9 +1132,9 @@ function library:panel(options)
 		items.outline = library:create("Frame", {
 			Parent = items.window_holder,
 			Name = "",
-			Position = dim2(0, 0, 0, 18),
+			Position = dim2(0, 0, 0, library.field_height),
 			BorderColor3 = rgb(0, 0, 0),
-			Size = dim2(1, 0, 1, -18),
+			Size = dim2(1, 0, 1, -library.field_height),
 			BorderSizePixel = 0,
 			BackgroundColor3 = themes.preset.inline
 		})
@@ -2554,7 +2564,7 @@ function library:slider(options)
 		value = options.default or 10,
 	}
 
-	local bar_height = mobile and 20 or 12
+	local bar_height = mobile and (library.row_height + 7) or library.row_height
 
 	local slider_REAL = library:create("TextLabel", {
 		Parent = self.holder,
@@ -5129,7 +5139,11 @@ function library:label(options)
 end
 
 function library:window(properties)
-	local menu_size = (properties and properties.size) or dim2(0, 604, 0, 628)
+	if properties and properties.text_size then
+		library:set_text_size(properties.text_size)
+	end
+
+	local menu_size = (properties and properties.size) or dim2(0, 560, 0, 520)
 
 	local window = {opened = true}
 	local opened = {}
@@ -5567,7 +5581,7 @@ function library:window(properties)
 		Parent = items.holder,
 		Name = " ",
 		BackgroundTransparency = 1,
-		Size = dim2(1, 0, 0, 22),
+		Size = dim2(1, 0, 0, library.header_height + 2),
 		BorderColor3 = rgb(0, 0, 0),
 		ZIndex = 5,
 		BorderSizePixel = 0,
@@ -5586,9 +5600,9 @@ function library:window(properties)
 		Parent = items.holder,
 		Name = " ",
 		BackgroundTransparency = 1,
-		Position = dim2(0, -1, 0, 19),
+		Position = dim2(0, -1, 0, library.header_height - 1),
 		BorderColor3 = rgb(0, 0, 0),
-		Size = dim2(1, 0, 1, -22),
+		Size = dim2(1, 0, 1, -(library.header_height + 2)),
 		BorderSizePixel = 0,
 		BackgroundColor3 = rgb(255, 255, 255)
 	})
