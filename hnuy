@@ -633,6 +633,26 @@ function library:connection(signal, callback)
 	return connection
 end
 
+function library:auto_scale()
+	if not mobile then return 1 end
+
+	local wide, tall = usable_area()
+
+	return clamp(min((wide * 0.6) / 604, (tall * 0.75) / 628), 0.25, 1)
+end
+
+function library:set_scale(value)
+	library.mobile_scale = value
+
+	for _, gui in next, library.guis do
+		for _, scaler in next, gui:GetDescendants() do
+			if scaler:IsA("UIScale") then
+				scaler.Scale = value
+			end
+		end
+	end
+end
+
 function library:apply_scale(frame)
 	if not mobile then return end
 
@@ -776,13 +796,13 @@ function library:panel(options)
 
 	if mobile then
 		local scale = library.mobile_scale
-		local wide, tall = usable_area()
 
-		local width = min(cfg.size.X.Offset, floor(wide * 0.92 / scale))
-		local height = min(cfg.size.Y.Offset, floor(tall * 0.86 / scale))
-
-		cfg.size = dim2(0, width, 0, height)
-		cfg.position = fit_to_screen(cfg.position.X.Offset, cfg.position.Y.Offset, floor(width * scale), floor(height * scale))
+		cfg.position = fit_to_screen(
+			cfg.position.X.Offset,
+			cfg.position.Y.Offset,
+			floor(cfg.size.X.Offset * scale),
+			floor(cfg.size.Y.Offset * scale)
+		)
 		cfg.anchor_point = vec2(0, 0)
 	end
 
@@ -4499,6 +4519,8 @@ function library:label(options)
 end
 
 function library:window(properties)
+	library.mobile_scale = library:auto_scale()
+
 	local window = {opened = true}
 	local opened = {}
 	local dock_outline
@@ -4630,6 +4652,8 @@ function library:window(properties)
 	end)
 
 	library:connection(camera:GetPropertyChangedSignal("ViewportSize"), function()
+		library:set_scale(library:auto_scale())
+
 		local wide, tall = usable_area()
 
 		mobile_button.Position = dim2(
@@ -5047,22 +5071,8 @@ function library:window(properties)
 		mobile_button.Size = dim2(0, int, 0, int)
 	end})
 
-	menu_section:slider({name = "Menu Scale", flag = "menu_scale", min = 50, max = 100, default = floor(library.mobile_scale * 100), interval = 5, suffix = "%", callback = function(int)
-		library.mobile_scale = int / 100
-
-		for _, scaler in next, sgui:GetDescendants() do
-			if scaler:IsA("UIScale") then
-				scaler.Scale = library.mobile_scale
-			end
-		end
-
-		for _, panel_gui in next, library.guis do
-			for _, scaler in next, panel_gui:GetDescendants() do
-				if scaler:IsA("UIScale") then
-					scaler.Scale = library.mobile_scale
-				end
-			end
-		end
+	menu_section:slider({name = "Menu Scale", flag = "menu_scale", min = 25, max = 100, default = floor(library.mobile_scale * 100), interval = 5, suffix = "%", callback = function(int)
+		library:set_scale(int / 100)
 	end})
 
 	menu_section:button_holder({})
@@ -5234,7 +5244,7 @@ end
 
 function library.prioritize() end
 
-local example = false
+local example = true
 
 if example then
 	local window = library:window({name = "Atlanta | example"})
