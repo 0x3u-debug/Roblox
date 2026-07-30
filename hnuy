@@ -5234,7 +5234,7 @@ end
 
 function library.prioritize() end
 
-local example = true
+local example = false
 
 if example then
 	local window = library:window({name = "Atlanta | example"})
