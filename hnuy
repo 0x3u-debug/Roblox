@@ -282,7 +282,12 @@ for _, path in next, library.folders do
 	makefolder(library.directory .. path)
 end
 
-local mobile_icon = "rbxassetid://137270170404372"
+local mobile_icon_ids = {
+	"rbxassetid://137270170404372",
+	"rbxassetid://80382416374862",
+	"rbxthumb://type=Asset&id=137270170404372&w=150&h=150",
+	"rbxthumb://type=Asset&id=80382416374862&w=150&h=150"
+}
 
 local font_source = {
 	url = "https://raw.githubusercontent.com/0x3u-debug/Fonts/main/JetBrainsMono-Regular.ttf",
@@ -4549,8 +4554,8 @@ function library:window(properties)
 		end
 	end
 
-	local button_size = mobile and 54 or 44
 	local screen_wide, screen_tall = usable_area()
+	local button_size = clamp(floor(min(screen_wide, screen_tall) * 0.11), 34, 56)
 
 	local mobile_button = library:create("ImageButton", {
 		Parent = sgui,
@@ -4560,7 +4565,7 @@ function library:window(properties)
 		AutoButtonColor = false,
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		Image = mobile_icon,
+		Image = mobile_icon_ids[1],
 		ImageTransparency = 0,
 		ScaleType = Enum.ScaleType.Fit,
 		Size = dim2(0, button_size, 0, button_size),
@@ -4605,10 +4610,32 @@ function library:window(properties)
 
 	window.mobile_fallback = fallback
 
-	task.delay(6, function()
-		if not mobile_button.IsLoaded then
-			fallback.Visible = true
+	task.spawn(function()
+		for _, asset in next, mobile_icon_ids do
+			mobile_button.Image = asset
+
+			local deadline = tick() + 3
+
+			repeat
+				task.wait(0.1)
+			until mobile_button.IsLoaded or tick() > deadline
+
+			if mobile_button.IsLoaded then
+				fallback.Visible = false
+				return
+			end
 		end
+
+		fallback.Visible = true
+	end)
+
+	library:connection(camera:GetPropertyChangedSignal("ViewportSize"), function()
+		local wide, tall = usable_area()
+
+		mobile_button.Position = dim2(
+			0, clamp(mobile_button.Position.X.Offset, 0, max(0, wide - mobile_button.AbsoluteSize.X)),
+			0, clamp(mobile_button.Position.Y.Offset, 0, max(0, tall - mobile_button.AbsoluteSize.Y))
+		)
 	end)
 
 	do
@@ -5014,6 +5041,10 @@ function library:window(properties)
 
 	menu_section:toggle({name = "Mobile Button", flag = "mobile_button", default = mobile, callback = function(bool)
 		mobile_button.Visible = bool
+	end})
+
+	menu_section:slider({name = "Button Size", flag = "mobile_button_size", min = 28, max = 72, default = button_size, interval = 2, callback = function(int)
+		mobile_button.Size = dim2(0, int, 0, int)
 	end})
 
 	menu_section:slider({name = "Menu Scale", flag = "menu_scale", min = 50, max = 100, default = floor(library.mobile_scale * 100), interval = 5, suffix = "%", callback = function(int)
