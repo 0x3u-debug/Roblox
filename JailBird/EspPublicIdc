@@ -89,7 +89,8 @@ local EspLibLink = {
 
 local playerBoxes = {}
 local partRegistry = {}
-local displayedValues = {}  
+local humanoidRegistry = {}
+local displayedValues = {}
 
 local VALID_PARTS = {
     "Head", "Torso", "HumanoidRootPart", "Left Arm", "Right Arm", "Left Leg", "Right Leg",
@@ -108,7 +109,11 @@ local function cacheCharacterParts(player, character)
     local parts = {}
     for _, part in ipairs(character:GetDescendants()) do if isValidPart(part) then table.insert(parts, part) end end
     partRegistry[player] = parts
-    character.DescendantAdded:Connect(function(part) if isValidPart(part) then table.insert(partRegistry[player], part) end end)
+    humanoidRegistry[player] = character:FindFirstChildOfClass("Humanoid")
+    character.DescendantAdded:Connect(function(part)
+        if isValidPart(part) then table.insert(partRegistry[player], part) end
+        if part:IsA("Humanoid") then humanoidRegistry[player] = part end
+    end)
 end
 
 local function getHighestBarOffset(side)
@@ -130,7 +135,7 @@ local function buildSeamlessColorSequence(gradConfig)
         table.insert(colors, gradConfig["Gradient" .. i])
         i = i + 1
     end
-    
+
     local count = #colors
     if count == 0 then
         return ColorSequence.new(Color3.fromRGB(255, 255, 255))
@@ -153,18 +158,18 @@ local function evaluateCustomGradientColor(gradConfig, ratio)
         table.insert(colors, gradConfig["Gradient" .. i])
         i = i + 1
     end
-    
+
     local count = #colors
     if count == 0 then return Color3.fromRGB(255, 255, 255) end
     if count == 1 then return colors[1] end
-    
+
     local clampedRatio = math.clamp(ratio, 0, 1)
     if clampedRatio == 1 then return colors[count] end
-    
+
     local scaled = clampedRatio * (count - 1)
     local index = math.floor(scaled) + 1
     local alpha = scaled - (index - 1)
-    
+
     local c1 = colors[index]
     local c2 = colors[index + 1] or c1
     return c1:Lerp(c2, alpha)
@@ -172,7 +177,7 @@ end
 
 local function createBoxUI(player)
     local container = createElement("Frame", { BackgroundTransparency = 1, Visible = false, Name = player.Name }, ESPGui)
-    
+
     local glowImg = createElement("ImageLabel", { Parent = container, Name = "GlowImage", ImageColor3 = Color3.fromRGB(255, 255, 255), ScaleType = Enum.ScaleType.Slice, ImageTransparency = 0.9, BorderColor3 = Color3.fromRGB(0, 0, 0), BackgroundColor3 = Color3.fromRGB(255, 255, 255), Image = "http://www.roblox.com/asset/?id=18245826428", BackgroundTransparency = 1, Position = UDim2.new(0, -20, 0, -20), Size = UDim2.new(1, 40, 1, 40), ZIndex = 0, BorderSizePixel = 0, SliceCenter = Rect.new(Vector2.new(21, 21), Vector2.new(79, 79)), Visible = false })
     local outerBlack = createElement("Frame", { Size = UDim2.new(1, 2, 1, 2), Position = UDim2.new(0, -1, 0, -1), BackgroundTransparency = 1, ZIndex = 1 }, container)
     createStroke(Color3.fromRGB(0, 0, 0), outerBlack)
@@ -180,23 +185,23 @@ local function createBoxUI(player)
     local mainStroke = createStroke(Color3.fromRGB(255, 255, 255), mainWhite)
     local innerBlack = createElement("Frame", { Size = UDim2.new(1, -2, 1, -2), Position = UDim2.new(0, 1, 0, 1), BackgroundTransparency = 1, ZIndex = 3 }, container)
     createStroke(Color3.fromRGB(0, 0, 0), innerBlack)
-    
+
     createElement("TextLabel", { Name = "NameText", Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0, -3), AnchorPoint = Vector2.new(0.5, 1), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), FontFace = customFont, TextSize = 12, AutomaticSize = Enum.AutomaticSize.XY, Text = player.Name, ZIndex = 5 }, container)
     createElement("TextLabel", { Name = "DistanceText", Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 1, 2), AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), FontFace = customFont, TextSize = 12, AutomaticSize = Enum.AutomaticSize.XY, Text = "0m", ZIndex = 5 }, container)
-    
+
     local barsFolder = createElement("Folder", { Name = "BarsFolder" }, container)
     for _, barConfig in pairs(EspLibLink.Drawing.Bars or {}) do
         local bar = createElement("Frame", { Name = barConfig.Name, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 1, BorderColor3 = Color3.fromRGB(0, 0, 0), ZIndex = 2, ClipsDescendants = true }, barsFolder)
         bar:SetAttribute("LastValue", -1)
-        
+
         local fill = createElement("Frame", { Name = "Fill", Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = barConfig.Color or Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, ZIndex = 3 }, bar)
-        
+
         local gradCfg = barConfig.Gradient
         if type(gradCfg) == "table" and gradCfg.Enabled then
             fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             createElement("UIGradient", { Name = "Grad", Rotation = 90, Color = buildSeamlessColorSequence(gradCfg), Offset = Vector2.new(0, 0) }, fill)
         end
-        
+
         createElement("TextLabel", { Name = "ValueText", Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), FontFace = customFont, TextSize = 12, AutomaticSize = Enum.AutomaticSize.XY, Text = "0", ZIndex = 5, Visible = false }, bar)
     end
 
@@ -212,7 +217,7 @@ end
 
 local function removePlayer(player)
     if playerBoxes[player] then playerBoxes[player].Container:Destroy(); playerBoxes[player] = nil end
-    partRegistry[player] = nil; displayedValues[player] = nil
+    partRegistry[player] = nil; humanoidRegistry[player] = nil; displayedValues[player] = nil
 end
 
 for _, player in ipairs(Players:GetPlayers()) do setupPlayer(player) end
@@ -253,7 +258,7 @@ RunService.RenderStepped:Connect(function(dt)
         local character = player.Character
         local parts = partRegistry[player]
         local root = character and character:FindFirstChild("HumanoidRootPart")
-        
+
         local shouldShow = true
         if EspLibLink.Drawing.Box.TeamCheck and player.Team and LocalPlayer.Team and player.Team == LocalPlayer.Team then
             shouldShow = false
@@ -268,10 +273,10 @@ RunService.RenderStepped:Connect(function(dt)
                     container.Size = UDim2.new(0, math.floor(size.X), 0, math.floor(size.Y))
                     container.Position = UDim2.new(0, math.floor(pos.X), 0, math.floor(pos.Y))
                     container.Visible = true
-                    
+
                     local topOffset = getHighestBarOffset("Top")
                     local bottomOffset = getHighestBarOffset("Bottom")
-                    
+
                     local nameText = container:FindFirstChild("NameText")
                     if nameText then
                         if topOffset > 0 then
@@ -280,7 +285,7 @@ RunService.RenderStepped:Connect(function(dt)
                             nameText.Position = UDim2.new(0.5, 0, 0, -3)
                         end
                     end
-                    
+
                     local distanceText = container:FindFirstChild("DistanceText")
                     if distanceText then
                         if bottomOffset > 0 then
@@ -289,11 +294,11 @@ RunService.RenderStepped:Connect(function(dt)
                             distanceText.Position = UDim2.new(0.5, 0, 1, 2)
                         end
                     end
-                    
+
                     local localChar = LocalPlayer.Character
                     local localRoot = localChar and localChar:FindFirstChild("HumanoidRootPart")
                     if localRoot then distanceText.Text = math.floor((localRoot.Position - root.Position).Magnitude) .. "m" end
-                    
+
                     local gradientConfig = EspLibLink.Drawing.Box.Gradient
                     if gradientConfig.Enabled then
                         local strokeGradient = data.MainStroke:FindFirstChildOfClass("UIGradient") or Instance.new("UIGradient")
@@ -306,16 +311,16 @@ RunService.RenderStepped:Connect(function(dt)
                         if grad then grad:Destroy() end
                         data.MainStroke.Color = Color3.fromRGB(255, 255, 255)
                     end
-                    
+
                     local glowConfig = EspLibLink.Drawing.Box.Glow
                     data.GlowImage.Visible = glowConfig.Enabled
                     if glowConfig.Enabled then
                         data.GlowImage.ImageColor3 = glowConfig.Color
-                        data.GlowImage.ImageTransparency = glowConfig.Transparency 
+                        data.GlowImage.ImageTransparency = glowConfig.Transparency
                     end
-                    
+
                     if not displayedValues[player] then displayedValues[player] = {} end
-                    
+
                     for _, barConfig in pairs(EspLibLink.Drawing.Bars or {}) do
                         local bar = data.BarsFolder:FindFirstChild(barConfig.Name)
                         if bar then
@@ -324,7 +329,7 @@ RunService.RenderStepped:Connect(function(dt)
                                 local t = barConfig.Thickness or 2
                                 local off = barConfig.Offset or 5
                                 local side = barConfig.Side or "Left"
-                                
+
                                 if side == "Left" then
                                     bar.Size = UDim2.new(0, t, 1, 2)
                                     bar.Position = UDim2.new(0, -off - t, 0, -1)
@@ -338,21 +343,30 @@ RunService.RenderStepped:Connect(function(dt)
                                     bar.Size = UDim2.new(1, 2, 0, t)
                                     bar.Position = UDim2.new(0, -1, 1, off)
                                 end
-                                
-                                local currentVal = barConfig.Values and barConfig.Values.Current or 100
-                                local maxVal = barConfig.Values and barConfig.Values.Max or 100
+
+                                local currentVal, maxVal
+                                if barConfig.Name == "HealthBar" then
+                                    local hum = humanoidRegistry[player]
+                                    currentVal = hum and hum.Health or 0
+                                    maxVal = hum and hum.MaxHealth or 100
+                                else
+                                    currentVal = barConfig.Values and barConfig.Values.Current or 100
+                                    maxVal = barConfig.Values and barConfig.Values.Max or 100
+                                end
+                                if maxVal <= 0 then maxVal = 1 end
+
                                 local lastVal = bar:GetAttribute("LastValue")
-                                
+
                                 if not displayedValues[player][barConfig.Name] then displayedValues[player][barConfig.Name] = currentVal else displayedValues[player][barConfig.Name] = displayedValues[player][barConfig.Name] + (currentVal - displayedValues[player][barConfig.Name]) * math.clamp(dt * 15, 0, 1) end
-                                
+
                                 local currentDisplayVal = displayedValues[player][barConfig.Name]
                                 local ratio = math.clamp(currentVal / maxVal, 0, 1)
-                                
+
                                 local gradCfg = barConfig.Gradient
                                 local textColor = Color3.fromRGB(255, 255, 255)
                                 local fill = bar:FindFirstChild("Fill")
                                 local valueText = bar:FindFirstChild("ValueText")
-                                
+
                                 if type(gradCfg) == "table" and gradCfg.Enabled then
                                     textColor = evaluateCustomGradientColor(gradCfg, ratio)
                                     if fill then
@@ -362,7 +376,7 @@ RunService.RenderStepped:Connect(function(dt)
                                             uig = Instance.new("UIGradient", fill)
                                             uig.Name = "Grad"
                                         end
-                                        
+
                                         local isHorizontal = (side == "Top" or side == "Bottom")
                                         uig.Rotation = isHorizontal and 0 or 90
                                         uig.Color = buildSeamlessColorSequence(gradCfg)
@@ -376,7 +390,7 @@ RunService.RenderStepped:Connect(function(dt)
                                     end
                                     textColor = barConfig.Color or Color3.fromRGB(255, 255, 255)
                                 end
-                                
+
                                 if fill and valueText then
                                     if currentVal ~= lastVal then
                                         bar:SetAttribute("LastValue", currentVal)
@@ -400,7 +414,7 @@ RunService.RenderStepped:Connect(function(dt)
                                         end
                                         TweenService:Create(fill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = targetSize, Position = targetPos }):Play()
                                     end
-                                    
+
                                     if barConfig.ShowText then
                                         local format = barConfig.TextFormat or "Value"
                                         local textStr = tostring(math.floor(currentDisplayVal + 0.5))
@@ -410,15 +424,15 @@ RunService.RenderStepped:Connect(function(dt)
                                             textStr = math.floor(currentDisplayVal + 0.5) .. "/" .. math.floor(maxVal + 0.5)
                                         end
                                         valueText.Text = textStr
-                                        
+
                                         if barConfig.HideWhenMax then
                                             valueText.Visible = currentVal < maxVal
                                         else
                                             valueText.Visible = true
                                         end
-                                        
+
                                         valueText.TextColor3 = textColor
-                                        
+
                                         if side == "Left" then
                                             valueText.AnchorPoint = Vector2.new(1, 0)
                                             valueText.Position = UDim2.new(0, -3, 0, math.floor(bar.AbsoluteSize.Y * (1 - ratio)) - 2)
