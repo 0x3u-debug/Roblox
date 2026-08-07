@@ -319,6 +319,12 @@ RunService.RenderStepped:Connect(function(dt)
         local root = character and character:FindFirstChild("HumanoidRootPart")
         local humanoid = character and character:FindFirstChild("Humanoid")
         
+        -- Update health values from humanoid
+        if humanoid and barsConfig and barsConfig.HealthBar then
+            barsConfig.HealthBar.Values.Current = humanoid.Health
+            barsConfig.HealthBar.Values.Max = humanoid.MaxHealth
+        end
+        
         local shouldShow = true
         if boxConfig.TeamCheck and character and character:FindFirstChild("MatchTeammateHighlight") then
             shouldShow = false
@@ -488,8 +494,11 @@ RunService.RenderStepped:Connect(function(dt)
                                             textStr = math_floor(currentDisplayVal + 0.5) .. "/" .. math_floor(maxVal + 0.5)
                                         end
                                         valueText.Text = textStr
-                                        
-                                        valueText.Visible = barConfig.HideWhenMax and (currentVal < maxVal) or true
+                                        valueText.Visible = true
+                                        -- Hide if HideWhenMax and health is full
+                                        if barConfig.HideWhenMax and currentVal >= maxVal then
+                                            valueText.Visible = false
+                                        end
                                         valueText.TextColor3 = textColor
                                         
                                         if side == "Left" then
